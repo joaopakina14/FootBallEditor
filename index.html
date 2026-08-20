@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FootBallEditor — Player</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- Custom title bar -->
+  <div class="titlebar" id="titlebar">
+    <div class="titlebar-drag">
+      <span class="app-logo">⚽</span>
+      <span class="app-title">FootBall Editor</span>
+    </div>
+    <div class="titlebar-controls">
+      <button class="tb-btn" id="btn-minimize" title="Minimizar">&#8211;</button>
+      <button class="tb-btn" id="btn-maximize" title="Maximizar">&#9744;</button>
+      <button class="tb-btn close" id="btn-close" title="Fechar">&#10005;</button>
+    </div>
+  </div>
+
+  <!-- Main layout -->
+  <div class="app">
+
+    <!-- Empty state / Drop zone -->
+    <div class="empty-state" id="emptyState">
+      <div class="empty-icon">▶</div>
+      <h2>Sem vídeo carregado</h2>
+      <p>Abre um ficheiro de vídeo para começar</p>
+      <button class="btn-open" id="btnOpenEmpty">Abrir Vídeo</button>
+      <p class="formats">MP4 · MKV · AVI · MOV · WMV · WebM e mais</p>
+    </div>
+
+    <!-- Video player -->
+    <div class="player-wrap" id="playerWrap" style="display:none">
+      <video id="video" tabindex="-1"></video>
+
+      <!-- Overlay for click to play/pause -->
+      <div class="video-overlay" id="videoOverlay"></div>
+
+      <!-- Big play icon on click -->
+      <div class="play-flash" id="playFlash">▶</div>
+
+      <!-- Controls bar -->
+      <div class="controls" id="controls">
+        <!-- Progress -->
+        <div class="progress-wrap">
+          <span class="time-current" id="timeCurrent">0:00</span>
+          <div class="progress-bar" id="progressBar">
+            <div class="progress-fill" id="progressFill"></div>
+            <div class="progress-thumb" id="progressThumb"></div>
+          </div>
+          <span class="time-total" id="timeTotal">0:00</span>
+        </div>
+
+        <!-- Buttons row -->
+        <div class="btn-row">
+          <div class="btn-left">
+            <button class="ctrl-btn" id="btnOpen" title="Abrir ficheiro">📂</button>
+            <button class="ctrl-btn" id="btnPlayPause" title="Play / Pause">▶</button>
+            <button class="ctrl-btn" id="btnStop" title="Parar">⏹</button>
+            <div class="volume-wrap">
+              <button class="ctrl-btn" id="btnMute" title="Mudo">🔊</button>
+              <input type="range" id="volumeSlider" min="0" max="1" step="0.02" value="1" />
+            </div>
+          </div>
+          <div class="btn-center">
+            <span class="filename" id="filenameLabel">—</span>
+          </div>
+          <div class="btn-right">
+            <button class="ctrl-btn" id="btnSpeed" title="Velocidade">1×</button>
+            <button class="ctrl-btn" id="btnFullscreen" title="Ecrã inteiro">⛶</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>
