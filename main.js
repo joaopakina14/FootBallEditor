@@ -1,5 +1,6 @@
 const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron')
 const path = require('path')
+const fs   = require('fs')
 const ffmpegStatic = require('ffmpeg-static')
 const ffmpeg = require('fluent-ffmpeg')
 
@@ -66,6 +67,31 @@ function createWindow() {
   ipcMain.handle('show-in-folder', (event, filePath) => {
     shell.showItemInFolder(filePath)
     return true
+  })
+
+  // ── Save annotations JSON alongside the video ──────────────
+  ipcMain.handle('save-annotations', (event, { videoPath, annotations }) => {
+    try {
+      const annPath = videoPath + '.ann.json'
+      fs.writeFileSync(annPath, JSON.stringify({ version: 1, annotations }, null, 2), 'utf8')
+      return { success: true }
+    } catch (err) {
+      console.error('save-annotations error:', err)
+      return { success: false, error: err.message }
+    }
+  })
+
+  // ── Load annotations JSON for a video ──────────────────────
+  ipcMain.handle('load-annotations', (event, videoPath) => {
+    try {
+      const annPath = videoPath + '.ann.json'
+      if (!fs.existsSync(annPath)) return { success: false, annotations: [] }
+      const data = JSON.parse(fs.readFileSync(annPath, 'utf8'))
+      return { success: true, annotations: data.annotations || [] }
+    } catch (err) {
+      console.error('load-annotations error:', err)
+      return { success: false, annotations: [] }
+    }
   })
 }
 

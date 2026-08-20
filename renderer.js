@@ -41,11 +41,7 @@ let speedIdx  = 3
 let scrubbing = false
 
 // ── Clip state ────────────────────────────────────────────
-const clip = {
-  inputPath: null,
-  inTime:    null,
-  outTime:   null
-}
+const clip = { inputPath: null, inTime: null, outTime: null }
 
 // ── Open file ─────────────────────────────────────────────
 async function openFile() {
@@ -63,7 +59,6 @@ function loadVideo(filePath) {
   emptyState.style.display  = 'none'
   playerWrap.style.display  = 'flex'
 
-  // Reset everything for new video
   clip.inputPath = filePath
   clip.inTime    = null
   clip.outTime   = null
@@ -74,6 +69,8 @@ function loadVideo(filePath) {
   updateTimelineMarkers()
   updateAnnotationBadge()
   setTimeout(resizeCanvas, 100)
+  // Auto-load annotations if they exist for this video
+  setTimeout(() => loadAnnotations(filePath), 400)
 }
 
 btnOpen.addEventListener('click', openFile)
@@ -92,8 +89,7 @@ videoOverlay.addEventListener('click', togglePlay)
 btnPlayPause.addEventListener('click', togglePlay)
 
 function togglePlay() {
-  if (video.paused) video.play()
-  else video.pause()
+  if (video.paused) video.play(); else video.pause()
   flashIcon()
 }
 function flashIcon() {
@@ -112,8 +108,7 @@ function startRenderLoop() {
   if (rafId) return
   function loop() {
     if (!video.paused && video.duration) {
-      const pct = (video.currentTime / video.duration) * 100
-      updateProgress(pct)
+      updateProgress((video.currentTime / video.duration) * 100)
       timeCurrent.textContent = formatTime(video.currentTime)
     }
     redraw()
@@ -135,8 +130,7 @@ btnStop.addEventListener('click', () => {
 // ── Progress bar ──────────────────────────────────────────
 video.addEventListener('loadedmetadata', () => {
   timeTotal.textContent = formatTime(video.duration)
-  updateTimelineMarkers()
-  resizeCanvas()
+  updateTimelineMarkers(); resizeCanvas()
 })
 video.addEventListener('timeupdate', () => {
   if (video.paused && video.duration) {
@@ -166,9 +160,9 @@ function seek(e) {
 volumeSlider.addEventListener('input', () => { video.volume = volumeSlider.value; video.muted = video.volume === 0; updateMuteIcon() })
 btnMute.addEventListener('click', () => { video.muted = !video.muted; if (!video.muted) volumeSlider.value = video.volume || 0.5; updateMuteIcon() })
 function updateMuteIcon() {
-  if (video.muted || video.volume === 0)  btnMute.textContent = '\uD83D\uDD07'
-  else if (video.volume < 0.5)            btnMute.textContent = '\uD83D\uDD09'
-  else                                    btnMute.textContent = '\uD83D\uDD0A'
+  if (video.muted || video.volume === 0) btnMute.textContent = '\uD83D\uDD07'
+  else if (video.volume < 0.5)           btnMute.textContent = '\uD83D\uDD09'
+  else                                   btnMute.textContent = '\uD83D\uDD0A'
 }
 
 // ── Speed ─────────────────────────────────────────────────
@@ -182,8 +176,7 @@ btnSpeed.addEventListener('click', () => {
 btnFullscreen.addEventListener('click', toggleFullscreen)
 videoOverlay.addEventListener('dblclick', toggleFullscreen)
 function toggleFullscreen() {
-  if (!document.fullscreenElement) playerWrap.requestFullscreen()
-  else document.exitFullscreen()
+  if (!document.fullscreenElement) playerWrap.requestFullscreen(); else document.exitFullscreen()
 }
 document.addEventListener('fullscreenchange', () => setTimeout(resizeCanvas, 100))
 let hideCtrlTimer
@@ -199,7 +192,6 @@ document.addEventListener('keydown', e => {
   if (e.code === 'KeyI' && !e.ctrlKey) { markIn(); return }
   if (e.code === 'KeyO' && !e.ctrlKey) { markOut(); return }
   if (e.code === 'KeyX' && !e.ctrlKey) { if (!btnCut.disabled) doCut(); return }
-
   if (!video.src) return
   switch (e.code) {
     case 'Space':      e.preventDefault(); togglePlay(); break
@@ -225,6 +217,46 @@ function formatTimeFile(s) {
 }
 
 // ══════════════════════════════════════════════════════════
+//   ANNOTATION PERSISTENCE
+// ══════════════════════════════════════════════════════════
+
+let saveAnnTimer = null
+
+// Debounced auto-save (600ms after last change)
+function scheduleAnnotationSave() {
+  if (!clip.inputPath) return
+  clearTimeout(saveAnnTimer)
+  saveAnnTimer = setTimeout(saveAnnotations, 600)
+}
+
+async function saveAnnotations() {
+  if (!clip.inputPath) return
+  try {
+    await ipcRenderer.invoke('save-annotations', {
+      videoPath:   clip.inputPath,
+      annotations: ds.annotations
+    })
+  } catch (e) {
+    console.warn('Could not save annotations:', e)
+  }
+}
+
+async function loadAnnotations(videoPath) {
+  try {
+    const result = await ipcRenderer.invoke('load-annotations', videoPath)
+    if (result.success && result.annotations && result.annotations.length > 0) {
+      ds.annotations = result.annotations
+      redraw()
+      updateTimelineMarkers()
+      updateAnnotationBadge()
+      showToast(`\uD83D\uDCC2 ${result.annotations.length} anota\u00E7\u00E3o(oes) carregada(s)`, 2500)
+    }
+  } catch (e) {
+    console.warn('Could not load annotations:', e)
+  }
+}
+
+// ══════════════════════════════════════════════════════════
 //   CLIP / CUT MODULE
 // ══════════════════════════════════════════════════════════
 
@@ -235,7 +267,6 @@ function markIn() {
   btnClipIn.title = `Inicio: ${formatTime(clip.inTime)} (I)`
   updateClipUI()
 }
-
 function markOut() {
   if (!video.src) return
   clip.outTime = video.currentTime
@@ -249,121 +280,97 @@ btnClipOut.addEventListener('click', markOut)
 
 function updateClipUI() {
   if (!video.duration) return
-
-  const hasIn  = clip.inTime  !== null
-  const hasOut = clip.outTime !== null
-
-  // IN marker
-  if (hasIn) {
-    const pct = (clip.inTime / video.duration) * 100
-    clipInMarker.style.left    = pct + '%'
+  if (clip.inTime !== null) {
+    clipInMarker.style.left    = (clip.inTime  / video.duration * 100) + '%'
     clipInMarker.style.display = 'block'
   }
-
-  // OUT marker
-  if (hasOut) {
-    const pct = (clip.outTime / video.duration) * 100
-    clipOutMarker.style.left    = pct + '%'
+  if (clip.outTime !== null) {
+    clipOutMarker.style.left    = (clip.outTime / video.duration * 100) + '%'
     clipOutMarker.style.display = 'block'
   }
-
-  // Clip zone (highlight between IN and OUT)
-  if (hasIn && hasOut) {
-    const t0 = Math.min(clip.inTime,  clip.outTime)
-    const t1 = Math.max(clip.inTime,  clip.outTime)
-    const p0 = (t0 / video.duration) * 100
-    const p1 = (t1 / video.duration) * 100
+  if (clip.inTime !== null && clip.outTime !== null) {
+    const t0 = Math.min(clip.inTime, clip.outTime)
+    const t1 = Math.max(clip.inTime, clip.outTime)
+    const p0 = t0 / video.duration * 100
+    const p1 = t1 / video.duration * 100
     clipZone.style.left    = p0 + '%'
     clipZone.style.width   = (p1 - p0) + '%'
     clipZone.style.display = 'block'
-
-    // Enable cut button
     btnCut.disabled = false
     btnCut.classList.add('ready')
-    const dur = t1 - t0
-    btnCut.title = `Cortar ${formatTime(t0)} → ${formatTime(t1)} (${dur.toFixed(1)}s) — X`
+    btnCut.title = `Cortar ${formatTime(t0)} \u2192 ${formatTime(t1)} (${(t1-t0).toFixed(1)}s) \u2014 X`
   }
 }
 
 function resetClipUI() {
   clip.inTime = null; clip.outTime = null
-  clipZone.style.display      = 'none'
-  clipInMarker.style.display  = 'none'
-  clipOutMarker.style.display = 'none'
-  btnClipIn.classList.remove('set-in')
-  btnClipOut.classList.remove('set-out')
+  clipZone.style.display = clipInMarker.style.display = clipOutMarker.style.display = 'none'
+  btnClipIn.classList.remove('set-in'); btnClipOut.classList.remove('set-out')
   btnClipIn.title  = 'Marcar inicio do corte (I)'
   btnClipOut.title = 'Marcar fim do corte (O)'
-  btnCut.disabled  = true
-  btnCut.classList.remove('ready')
-  btnCut.title = 'Cortar e guardar (X)'
+  btnCut.disabled  = true; btnCut.classList.remove('ready')
+  btnCut.title     = 'Cortar e guardar (X)'
 }
 
-// ── Do the cut ────────────────────────────────────────────
 btnCut.addEventListener('click', doCut)
 
 async function doCut() {
   if (!clip.inputPath || clip.inTime === null || clip.outTime === null) return
 
-  const startTime  = Math.min(clip.inTime, clip.outTime)
-  const endTime    = Math.max(clip.inTime, clip.outTime)
-  const duration   = endTime - startTime
+  const startTime = Math.min(clip.inTime, clip.outTime)
+  const endTime   = Math.max(clip.inTime, clip.outTime)
+  const duration  = endTime - startTime
 
-  if (duration < 0.5) { showToast('❌ Seleciona pelo menos 0.5 segundos', 3000); return }
+  if (duration < 0.5) { showToast('\u274C Seleciona pelo menos 0.5 segundos', 3000); return }
 
-  // Build output filename
+  // Build output path
   const dir      = path.dirname(clip.inputPath)
   const ext      = path.extname(clip.inputPath)
   const base     = path.basename(clip.inputPath, ext)
-  const inLabel  = formatTimeFile(startTime)
-  const outLabel = formatTimeFile(endTime)
-  const outputPath = path.join(dir, `${base}_clip_${inLabel}-${outLabel}${ext}`)
+  const outputPath = path.join(dir, `${base}_clip_${formatTimeFile(startTime)}-${formatTimeFile(endTime)}${ext}`)
 
-  // Disable button during processing
-  btnCut.disabled = true
-  btnCut.classList.remove('ready')
-  showToast('✂️ A cortar...', 0) // persistent until done
+  // ★ Filter annotations within [startTime, endTime] and adjust timestamps
+  const clipAnnotations = ds.annotations
+    .filter(ann => ann.timestamp >= startTime && ann.timestamp <= endTime)
+    .map(ann => ({ ...ann, timestamp: +(ann.timestamp - startTime).toFixed(3) }))
+
+  btnCut.disabled = true; btnCut.classList.remove('ready')
+  showToast('\u2702\uFE0F A cortar...', 0)
 
   const result = await ipcRenderer.invoke('cut-video', {
-    inputPath: clip.inputPath,
-    startTime,
-    duration,
-    outputPath
+    inputPath: clip.inputPath, startTime, duration, outputPath
   })
 
   if (result.success) {
+    // ★ Save adjusted annotations alongside the new clip
+    if (clipAnnotations.length > 0) {
+      await ipcRenderer.invoke('save-annotations', {
+        videoPath:   result.outputPath,
+        annotations: clipAnnotations
+      })
+    }
     const filename = path.basename(result.outputPath)
-    showToast(`✅ ${filename}`, 5000, result.outputPath)
-    resetClipUI() // ready for next clip
+    const annInfo  = clipAnnotations.length > 0 ? ` + ${clipAnnotations.length} anota\u00E7\u00E3o(oes)` : ''
+    showToast(`\u2705 ${filename}${annInfo}`, 5000, result.outputPath)
+    resetClipUI()
   } else {
-    showToast(`❌ Erro: ${result.error}`, 5000)
-    btnCut.disabled = false
-    btnCut.classList.add('ready')
+    showToast(`\u274C Erro: ${result.error}`, 5000)
+    btnCut.disabled = false; btnCut.classList.add('ready')
   }
 }
 
 // ── Toast notification ────────────────────────────────────
 let toastTimer = null
 function showToast(message, duration = 3000, openPath = null) {
-  clearTimeout(toastTimer)
-  toast.innerHTML = ''
-
-  const text = document.createElement('span')
-  text.textContent = message
-  toast.appendChild(text)
-
+  clearTimeout(toastTimer); toast.innerHTML = ''
+  const text = document.createElement('span'); text.textContent = message; toast.appendChild(text)
   if (openPath) {
-    const btn = document.createElement('button')
-    btn.className   = 'toast-open-btn'
-    btn.textContent = 'Abrir pasta'
+    const btn = document.createElement('button'); btn.className = 'toast-open-btn'; btn.textContent = 'Abrir pasta'
     btn.addEventListener('click', () => ipcRenderer.invoke('show-in-folder', openPath))
     toast.appendChild(btn)
   }
-
   toast.classList.add('show')
-  if (duration > 0) {
-    toastTimer = setTimeout(() => toast.classList.remove('show'), duration)
-  }
+  if (duration > 0) toastTimer = setTimeout(() => toast.classList.remove('show'), duration)
 }
 
 // ══════════════════════════════════════════════════════════
@@ -375,33 +382,20 @@ const ctx       = canvas.getContext('2d')
 const drawPanel = document.getElementById('drawPanel')
 
 const ds = {
-  enabled:     false,
-  tool:        'pencil',
-  color:       '#ffffff',
-  width:       2,
-  duration:    4,
-  annotations: [],
-  current:     null,
-  drawing:     false
+  enabled: false, tool: 'pencil', color: '#ffffff', width: 2, duration: 4,
+  annotations: [], current: null, drawing: false
 }
 
-// Canvas resize
 function resizeCanvas() {
-  const dpr  = window.devicePixelRatio || 1
-  const rect = video.getBoundingClientRect()
+  const dpr = window.devicePixelRatio || 1, rect = video.getBoundingClientRect()
   if (!rect.width || !rect.height) return
   const saved = [...ds.annotations]
-  canvas.width  = rect.width  * dpr
-  canvas.height = rect.height * dpr
-  canvas.style.width  = rect.width  + 'px'
-  canvas.style.height = rect.height + 'px'
-  ctx.scale(dpr, dpr)
-  ds.annotations = saved
-  redraw()
+  canvas.width  = rect.width  * dpr; canvas.height = rect.height * dpr
+  canvas.style.width = rect.width + 'px'; canvas.style.height = rect.height + 'px'
+  ctx.scale(dpr, dpr); ds.annotations = saved; redraw()
 }
 window.addEventListener('resize', resizeCanvas)
 
-// Visibility
 function isVisible(ann, t) {
   if (ann.duration === -1 || !video.duration) return true
   return t >= ann.timestamp - 0.3 && t <= ann.timestamp + ann.duration
@@ -409,9 +403,9 @@ function isVisible(ann, t) {
 function getOpacity(ann, t) {
   if (ann.duration === -1 || !video.duration) return 1
   const start = ann.timestamp - 0.3, end = ann.timestamp + ann.duration
-  const fadeDur = Math.min(0.4, ann.duration * 0.15)
+  const fd = Math.min(0.4, ann.duration * 0.15)
   if (t < ann.timestamp) return Math.max(0, Math.min(1, (t - start) / (ann.timestamp - start + 0.001)))
-  if (t > end - fadeDur) return Math.max(0, (end - t) / fadeDur)
+  if (t > end - fd)      return Math.max(0, (end - t) / fd)
   return 1
 }
 
@@ -425,7 +419,7 @@ function toggleEditMode() {
 }
 btnEditMode.addEventListener('click', toggleEditMode)
 
-// Tool / Color / Width / Duration selectors
+// Selectors
 document.querySelectorAll('.dp-tool[data-tool]').forEach(btn => {
   btn.addEventListener('click', () => { document.querySelectorAll('.dp-tool[data-tool]').forEach(b => b.classList.remove('active')); btn.classList.add('active'); ds.tool = btn.dataset.tool })
 })
@@ -443,10 +437,12 @@ document.querySelectorAll('.dp-dur').forEach(btn => {
 function undoDraw() {
   if (!ds.annotations.length) return
   ds.annotations.pop(); redraw(); updateTimelineMarkers(); updateAnnotationBadge()
+  scheduleAnnotationSave() // ★ persist change
 }
 document.getElementById('btnUndo').addEventListener('click', undoDraw)
 document.getElementById('btnClearAll').addEventListener('click', () => {
   ds.annotations = []; ds.current = null; redraw(); updateTimelineMarkers(); updateAnnotationBadge()
+  scheduleAnnotationSave() // ★ persist change
 })
 
 // Mouse drawing
@@ -467,7 +463,11 @@ canvas.addEventListener('mouseup', e => {
   if (!ds.drawing || !ds.current) return; ds.drawing = false
   const ann = ds.current
   const isTiny = ann.tool !== 'pencil' && Math.abs(ann.x2-ann.x1) < 3 && Math.abs(ann.y2-ann.y1) < 3
-  if (!isTiny) { ann.timestamp = video.currentTime || 0; ann.duration = ds.duration; ds.annotations.push(ann); updateTimelineMarkers(); updateAnnotationBadge() }
+  if (!isTiny) {
+    ann.timestamp = video.currentTime || 0; ann.duration = ds.duration
+    ds.annotations.push(ann); updateTimelineMarkers(); updateAnnotationBadge()
+    scheduleAnnotationSave() // ★ persist
+  }
   ds.current = null; redraw()
 })
 canvas.addEventListener('mouseleave', () => {
@@ -475,6 +475,7 @@ canvas.addEventListener('mouseleave', () => {
     ds.current.timestamp = video.currentTime || 0; ds.current.duration = ds.duration
     ds.annotations.push(ds.current); ds.current = null; ds.drawing = false
     redraw(); updateTimelineMarkers(); updateAnnotationBadge()
+    scheduleAnnotationSave() // ★ persist
   }
 })
 function getPos(e) { const r = canvas.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top } }
@@ -510,20 +511,20 @@ function drawPencil(ann) {
   if (ann.points.length === 1) { ctx.beginPath(); ctx.arc(ann.points[0].x, ann.points[0].y, ann.width/2, 0, Math.PI*2); ctx.fill(); return }
   ctx.beginPath(); ctx.moveTo(ann.points[0].x, ann.points[0].y)
   for (let i = 1; i < ann.points.length-1; i++) {
-    const mx = (ann.points[i].x+ann.points[i+1].x)/2, my = (ann.points[i].y+ann.points[i+1].y)/2
+    const mx=(ann.points[i].x+ann.points[i+1].x)/2, my=(ann.points[i].y+ann.points[i+1].y)/2
     ctx.quadraticCurveTo(ann.points[i].x, ann.points[i].y, mx, my)
   }
   const last = ann.points[ann.points.length-1]; ctx.lineTo(last.x, last.y); ctx.stroke()
 }
 function drawLine(ann) { ctx.beginPath(); ctx.moveTo(ann.x1, ann.y1); ctx.lineTo(ann.x2, ann.y2); ctx.stroke() }
 function drawArrow(ann) {
-  const { x1,y1,x2,y2,width } = ann, dx=x2-x1, dy=y2-y1
+  const { x1,y1,x2,y2,width }=ann, dx=x2-x1, dy=y2-y1
   if (Math.sqrt(dx*dx+dy*dy)<2) return
-  const headLen = Math.max(14,width*4), angle = Math.atan2(dy,dx), spread = Math.PI/7
+  const hl=Math.max(14,width*4), a=Math.atan2(dy,dx), sp=Math.PI/7
   ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke()
   ctx.setLineDash([]); ctx.beginPath(); ctx.moveTo(x2,y2)
-  ctx.lineTo(x2-headLen*Math.cos(angle-spread), y2-headLen*Math.sin(angle-spread))
-  ctx.lineTo(x2-headLen*Math.cos(angle+spread), y2-headLen*Math.sin(angle+spread))
+  ctx.lineTo(x2-hl*Math.cos(a-sp), y2-hl*Math.sin(a-sp))
+  ctx.lineTo(x2-hl*Math.cos(a+sp), y2-hl*Math.sin(a+sp))
   ctx.closePath(); ctx.fill()
 }
 function drawCircle(ann) {
@@ -542,27 +543,23 @@ function updateTimelineMarkers() {
   document.querySelectorAll('.tl-marker').forEach(m => m.remove())
   if (!video.duration) return
   const buckets = new Map()
-  for (const ann of ds.annotations) {
-    buckets.set(Math.round(ann.timestamp * 2), ann)
-  }
+  for (const ann of ds.annotations) buckets.set(Math.round(ann.timestamp*2), ann)
   for (const [, ann] of buckets) {
-    const pct = (ann.timestamp / video.duration) * 100
-    const marker = document.createElement('div')
-    marker.className = 'tl-marker'
-    marker.style.left       = pct + '%'
-    marker.style.background = ann.color
-    marker.style.boxShadow  = `0 0 7px ${ann.color}dd, 0 0 2px ${ann.color}`
-    marker.title = formatTime(ann.timestamp)
-    marker.addEventListener('click', ev => {
+    const pct = ann.timestamp / video.duration * 100
+    const m   = document.createElement('div')
+    m.className = 'tl-marker'; m.style.left = pct+'%'
+    m.style.background = ann.color; m.style.boxShadow = `0 0 7px ${ann.color}dd, 0 0 2px ${ann.color}`
+    m.title = formatTime(ann.timestamp)
+    m.addEventListener('click', ev => {
       ev.stopPropagation(); video.currentTime = ann.timestamp
       updateProgress(pct); timeCurrent.textContent = formatTime(ann.timestamp); redraw()
     })
-    progressBar.appendChild(marker)
+    progressBar.appendChild(m)
   }
 }
 
 function updateAnnotationBadge() {
   const count = ds.annotations.length
-  if (count > 0) { btnEditMode.dataset.count = count; btnEditMode.title = `Modo de desenho (E) — ${count} anotacao(oes)` }
+  if (count > 0) { btnEditMode.dataset.count = count; btnEditMode.title = `Modo de desenho (E) \u2014 ${count} anota\u00E7\u00E3o(oes)` }
   else { delete btnEditMode.dataset.count; btnEditMode.title = 'Modo de desenho (E)' }
 }
