@@ -602,14 +602,47 @@ function getTrackCenterAtTime(trackAnn, t) {
     else break
   }
 
+  if (!point) return null
+
+  // ★ Off-Screen Check: If player exited camera bounds (near edges), mark as invalid/hidden
+  if (point.x <= 0.015 || point.x >= 0.985 || point.y <= 0.015 || point.y >= 0.985) {
+    return null
+  }
+
   const vRect = getVideoVisualRect()
-  if (!vRect || !point) return null
+  if (!vRect) return null
 
   return {
     x: (point.x * vRect.displayWidth) + vRect.offsetX,
     y: (point.y * vRect.displayHeight) + vRect.offsetY,
     pw: point.w * vRect.displayWidth
   }
+}
+
+// Visibility check with Auto-Hide on camera exit / tracker end
+function isVisible(ann, t) {
+  if (!video.duration) return true
+
+  // ★ If element is attached to 2 trackers, hide immediately if EITHER tracker leaves screen or ends
+  if (ann.attachedTrackStartId && ann.attachedTrackEndId) {
+    const trackStart = ds.annotations.find(a => a.id === ann.attachedTrackStartId)
+    const trackEnd   = ds.annotations.find(a => a.id === ann.attachedTrackEndId)
+    if (!trackStart || !trackEnd) return false
+    const posStart = getTrackCenterAtTime(trackStart, t)
+    const posEnd   = getTrackCenterAtTime(trackEnd, t)
+    if (!posStart || !posEnd) return false // Hide line if ANY player left the screen!
+  }
+
+  // ★ If element is attached to 1 tracker, hide immediately if tracker leaves screen or ends
+  if (ann.attachedTrackId) {
+    const parentTrack = ds.annotations.find(a => a.id === ann.attachedTrackId)
+    if (!parentTrack) return false
+    const posParent = getTrackCenterAtTime(parentTrack, t)
+    if (!posParent) return false // Hide element if player left the screen!
+  }
+
+  if (ann.duration === -1) return true
+  return t >= ann.timestamp - 0.3 && t <= ann.timestamp + ann.duration
 }
 
 // Helper: check if a point (x, y) touches a track spotlight at time t
@@ -680,7 +713,8 @@ canvas.addEventListener('mouseup', async e => {
 
         if (result && result.success && result.trajectory && result.trajectory.length > 0) {
           ann.timestamp  = video.currentTime || 0
-          ann.duration   = trackDuration
+          const maxValidDur = result.trajectory[result.trajectory.length - 1].time
+          ann.duration   = Math.min(trackDuration, maxValidDur > 0 ? maxValidDur : trackDuration)
           ann.trajectory = result.trajectory
           ds.annotations.push(ann)
           updateTimelineMarkers()
