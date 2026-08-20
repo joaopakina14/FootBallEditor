@@ -47,18 +47,57 @@ function createWindow() {
     return null
   })
 
-  // ── Cut video with FFmpeg (-c copy, fast) ──────────────────
-  ipcMain.handle('cut-video', async (event, { inputPath, startTime, duration, outputPath }) => {
+  // ── Cut video with optional burn-in overlays (FFmpeg) ──────────────────
+  ipcMain.handle('cut-video', async (event, { inputPath, startTime, duration, outputPath, overlayImages }) => {
     return new Promise((resolve) => {
-      ffmpeg(inputPath)
+      let command = ffmpeg(inputPath)
         .setFfmpegPath(ffmpegStatic)
         .setStartTime(startTime)
         .setDuration(duration)
-        .outputOptions(['-c copy', '-avoid_negative_ts make_zero'])
+
+      if (overlayImages && overlayImages.length > 0) {
+        // We have drawings to burn-in onto the video!
+        // Save temp overlay images and construct complex filter
+        const tempDir = path.join(app.getPath('temp'), 'football_editor_overlays')
+        if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true })
+
+        let filterInputs = ''
+        let filterComplex = ''
+        let lastStream = '0:v'
+
+        overlayImages.forEach((ov, index) => {
+          const imgFileName = `overlay_${Date.now()}_${index}.png`
+          const imgPath = path.join(tempDir, imgFileName)
+          const base64Data = ov.dataUrl.replace(/^data:image\/png;base64,/, "")
+          fs.writeFileSync(imgPath, base64Data, 'base64')
+
+          command.input(imgPath)
+          const inputIndex = index + 1
+          const enableCond = `between(t,${ov.startTime.toFixed(2)},${ov.endTime.toFixed(2)})`
+          const nextStream = `v${index}`
+          filterComplex += `[${lastStream}][${inputIndex}:v]overlay=0:0:enable='${enableCond}'[${nextStream}];`
+          lastStream = nextStream
+        })
+
+        // Remove trailing semicolon
+        filterComplex = filterComplex.slice(0, -1)
+
+        command
+          .complexFilter(filterComplex, [lastStream])
+          .outputOptions(['-c:v libx264', '-preset ultrafast', '-c:a copy'])
+      } else {
+        // Fast copy if no annotations to burn
+        command.outputOptions(['-c copy', '-avoid_negative_ts make_zero'])
+      }
+
+      command
         .output(outputPath)
         .on('start', cmd => console.log('FFmpeg started:', cmd))
         .on('end', () => resolve({ success: true, outputPath }))
-        .on('error', err => resolve({ success: false, error: err.message }))
+        .on('error', err => {
+          console.error('FFmpeg error:', err)
+          resolve({ success: false, error: err.message })
+        })
         .run()
     })
   })

@@ -329,40 +329,61 @@ async function doCut() {
   const base     = path.basename(clip.inputPath, ext)
   const outputPath = path.join(dir, `${base}_clip_${formatTimeFile(startTime)}-${formatTimeFile(endTime)}${ext}`)
 
-  // ★ Filter annotations overlapping with [startTime, endTime] and adjust timestamps
-  const clipAnnotations = ds.annotations
-    .filter(ann => {
-      if (ann.duration === -1) return true // Always visible annotations stay
-      const annEnd = ann.timestamp + ann.duration
-      // Checks if annotation overlaps with [startTime, endTime]
-      return ann.timestamp <= endTime && annEnd >= startTime
-    })
-    .map(ann => {
-      const newTimestamp = Math.max(0, ann.timestamp - startTime)
-      return {
-        ...ann,
-        timestamp: +newTimestamp.toFixed(3)
+  // ★ Filter annotations overlapping with [startTime, endTime]
+  const targetAnns = ds.annotations.filter(ann => {
+    if (ann.duration === -1) return true
+    const annEnd = ann.timestamp + ann.duration
+    return ann.timestamp <= endTime && annEnd >= startTime
+  })
+
+  // ★ Generate PNG overlays for each annotation at video resolution
+  const overlayImages = []
+  if (targetAnns.length > 0 && video.videoWidth && video.videoHeight) {
+    const offscreen = document.createElement('canvas')
+    offscreen.width = video.videoWidth
+    offscreen.height = video.videoHeight
+    const offCtx = offscreen.getContext('2d')
+
+    const screenRect = canvas.getBoundingClientRect()
+    const scaleX = video.videoWidth / screenRect.width
+    const scaleY = video.videoHeight / screenRect.height
+
+    targetAnns.forEach(ann => {
+      offCtx.clearRect(0, 0, offscreen.width, offscreen.height)
+      offCtx.save()
+      offCtx.scale(scaleX, scaleY)
+      
+      // Render single annotation to offscreen canvas
+      renderAnnToCtx(offCtx, ann)
+      offCtx.restore()
+
+      const relStart = Math.max(0, ann.timestamp - startTime)
+      const relEnd   = ann.duration === -1 ? duration : Math.min(duration, (ann.timestamp + ann.duration) - startTime)
+
+      if (relEnd > relStart) {
+        overlayImages.push({
+          dataUrl: offscreen.toDataURL('image/png'),
+          startTime: relStart,
+          endTime: relEnd
+        })
       }
     })
+  }
 
   btnCut.disabled = true; btnCut.classList.remove('ready')
-  showToast('\u2702\uFE0F A cortar...', 0)
+  const statusMsg = overlayImages.length > 0 
+    ? `\u2702\uFE0F A processar e gravar ${overlayImages.length} anota\u00E7\u00E3o(oes) no v\u00EDdeo...` 
+    : '\u2702\uFE0F A cortar...'
+  showToast(statusMsg, 0)
 
   const result = await ipcRenderer.invoke('cut-video', {
-    inputPath: clip.inputPath, startTime, duration, outputPath
+    inputPath: clip.inputPath, startTime, duration, outputPath, overlayImages
   })
 
   if (result.success) {
-    // ★ Save adjusted annotations alongside the new clip
-    if (clipAnnotations.length > 0) {
-      await ipcRenderer.invoke('save-annotations', {
-        videoPath:   result.outputPath,
-        annotations: clipAnnotations
-      })
-    }
     const filename = path.basename(result.outputPath)
-    const annInfo  = clipAnnotations.length > 0 ? ` + ${clipAnnotations.length} anota\u00E7\u00E3o(oes)` : ''
-    showToast(`\u2705 ${filename}${annInfo}`, 5000, result.outputPath)
+    const annInfo  = overlayImages.length > 0 ? ` + ${overlayImages.length} anota\u00E7\u00E3o(oes) gravada(s)!` : ''
+    showToast(`\u2705 ${filename}${annInfo}`, 6000, result.outputPath)
     resetClipUI()
   } else {
     showToast(`\u274C Erro: ${result.error}`, 5000)
@@ -504,49 +525,53 @@ function redraw() {
 }
 
 function renderAnn(ann) {
-  ctx.save(); ctx.strokeStyle = ann.color; ctx.fillStyle = ann.color
-  ctx.lineWidth = ann.width; ctx.lineCap = 'round'; ctx.lineJoin = 'round'
-  ctx.setLineDash(ann.tool === 'dashed' ? [ann.width*4, ann.width*2.5] : [])
-  switch (ann.tool) {
-    case 'pencil': drawPencil(ann); break
-    case 'line': case 'dashed': drawLine(ann); break
-    case 'arrow':  drawArrow(ann);  break
-    case 'circle': drawCircle(ann); break
-    case 'rect':   drawRect(ann);   break
-  }
-  ctx.restore()
+  renderAnnToCtx(ctx, ann)
 }
 
-function drawPencil(ann) {
+function renderAnnToCtx(targetCtx, ann) {
+  targetCtx.save(); targetCtx.strokeStyle = ann.color; targetCtx.fillStyle = ann.color
+  targetCtx.lineWidth = ann.width; targetCtx.lineCap = 'round'; targetCtx.lineJoin = 'round'
+  targetCtx.setLineDash(ann.tool === 'dashed' ? [ann.width*4, ann.width*2.5] : [])
+  switch (ann.tool) {
+    case 'pencil': drawPencilCtx(targetCtx, ann); break
+    case 'line': case 'dashed': drawLineCtx(targetCtx, ann); break
+    case 'arrow':  drawArrowCtx(targetCtx, ann);  break
+    case 'circle': drawCircleCtx(targetCtx, ann); break
+    case 'rect':   drawRectCtx(targetCtx, ann);   break
+  }
+  targetCtx.restore()
+}
+
+function drawPencilCtx(c, ann) {
   if (!ann.points.length) return
-  if (ann.points.length === 1) { ctx.beginPath(); ctx.arc(ann.points[0].x, ann.points[0].y, ann.width/2, 0, Math.PI*2); ctx.fill(); return }
-  ctx.beginPath(); ctx.moveTo(ann.points[0].x, ann.points[0].y)
+  if (ann.points.length === 1) { c.beginPath(); c.arc(ann.points[0].x, ann.points[0].y, ann.width/2, 0, Math.PI*2); c.fill(); return }
+  c.beginPath(); c.moveTo(ann.points[0].x, ann.points[0].y)
   for (let i = 1; i < ann.points.length-1; i++) {
     const mx=(ann.points[i].x+ann.points[i+1].x)/2, my=(ann.points[i].y+ann.points[i+1].y)/2
-    ctx.quadraticCurveTo(ann.points[i].x, ann.points[i].y, mx, my)
+    c.quadraticCurveTo(ann.points[i].x, ann.points[i].y, mx, my)
   }
-  const last = ann.points[ann.points.length-1]; ctx.lineTo(last.x, last.y); ctx.stroke()
+  const last = ann.points[ann.points.length-1]; c.lineTo(last.x, last.y); c.stroke()
 }
-function drawLine(ann) { ctx.beginPath(); ctx.moveTo(ann.x1, ann.y1); ctx.lineTo(ann.x2, ann.y2); ctx.stroke() }
-function drawArrow(ann) {
+function drawLineCtx(c, ann) { c.beginPath(); c.moveTo(ann.x1, ann.y1); c.lineTo(ann.x2, ann.y2); c.stroke() }
+function drawArrowCtx(c, ann) {
   const { x1,y1,x2,y2,width }=ann, dx=x2-x1, dy=y2-y1
   if (Math.sqrt(dx*dx+dy*dy)<2) return
   const hl=Math.max(14,width*4), a=Math.atan2(dy,dx), sp=Math.PI/7
-  ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke()
-  ctx.setLineDash([]); ctx.beginPath(); ctx.moveTo(x2,y2)
-  ctx.lineTo(x2-hl*Math.cos(a-sp), y2-hl*Math.sin(a-sp))
-  ctx.lineTo(x2-hl*Math.cos(a+sp), y2-hl*Math.sin(a+sp))
-  ctx.closePath(); ctx.fill()
+  c.beginPath(); c.moveTo(x1,y1); c.lineTo(x2,y2); c.stroke()
+  c.setLineDash([]); c.beginPath(); c.moveTo(x2,y2)
+  c.lineTo(x2-hl*Math.cos(a-sp), y2-hl*Math.sin(a-sp))
+  c.lineTo(x2-hl*Math.cos(a+sp), y2-hl*Math.sin(a+sp))
+  c.closePath(); c.fill()
 }
-function drawCircle(ann) {
+function drawCircleCtx(c, ann) {
   const cx=(ann.x1+ann.x2)/2, cy=(ann.y1+ann.y2)/2
   const rx=Math.abs(ann.x2-ann.x1)/2, ry=Math.abs(ann.y2-ann.y1)/2
-  if (rx<1&&ry<1) return; ctx.beginPath(); ctx.ellipse(cx,cy,Math.max(rx,1),Math.max(ry,1),0,0,Math.PI*2); ctx.stroke()
+  if (rx<1&&ry<1) return; c.beginPath(); c.ellipse(cx,cy,Math.max(rx,1),Math.max(ry,1),0,0,Math.PI*2); c.stroke()
 }
-function drawRect(ann) {
+function drawRectCtx(c, ann) {
   const x=Math.min(ann.x1,ann.x2), y=Math.min(ann.y1,ann.y2)
   const w=Math.abs(ann.x2-ann.x1), h=Math.abs(ann.y2-ann.y1)
-  if (w<1||h<1) return; ctx.beginPath(); ctx.roundRect(x,y,w,h,3); ctx.stroke()
+  if (w<1||h<1) return; c.beginPath(); c.roundRect(x,y,w,h,3); c.stroke()
 }
 
 // Timeline markers
