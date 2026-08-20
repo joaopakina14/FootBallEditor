@@ -364,6 +364,13 @@ async function doCut() {
   const base     = path.basename(clip.inputPath, ext)
   const outputPath = path.join(dir, `${base}_clip_${formatTimeFile(startTime)}-${formatTimeFile(endTime)}${ext}`)
 
+  // ★ Filter annotations overlapping with [startTime, endTime]
+  const targetAnns = ds.annotations.filter(ann => {
+    if (ann.duration === -1) return true
+    const annEnd = ann.timestamp + ann.duration
+    return ann.timestamp <= endTime && annEnd >= startTime
+  })
+
   // ★ Separate static annotations and animated tracking annotations
   const staticAnns = targetAnns.filter(ann => ann.tool !== 'track')
   const trackAnns  = targetAnns.filter(ann => ann.tool === 'track' && ann.trajectory && ann.trajectory.length > 0)
