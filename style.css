@@ -198,17 +198,19 @@ video { flex: 1; width: 100%; height: calc(100% - var(--bar-h)); object-fit: con
 }
 .progress-bar:hover .progress-thumb { transform: translate(-50%, -50%) scale(1); }
 
-/* Timeline annotation markers */
+/* Timeline annotation markers — color set dynamically via JS */
 .tl-marker {
   position: absolute; top: 50%;
   transform: translate(-50%, -50%);
-  width: 9px; height: 9px; border-radius: 50%;
-  background: var(--accent2);
+  width: 10px; height: 10px; border-radius: 50%;
+  border: 1.5px solid rgba(255,255,255,0.4);
   pointer-events: all; cursor: pointer; z-index: 2;
-  box-shadow: 0 0 6px rgba(124,93,249,0.9);
-  transition: transform 0.15s, box-shadow 0.15s;
+  transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
 }
-.tl-marker:hover { transform: translate(-50%, -50%) scale(1.7); box-shadow: 0 0 10px rgba(124,93,249,1); }
+.tl-marker:hover {
+  transform: translate(-50%, -50%) scale(1.8);
+  border-color: rgba(255,255,255,0.9);
+}
 
 /* Buttons row */
 .btn-row { display: flex; align-items: center; justify-content: space-between; }

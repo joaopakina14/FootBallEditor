@@ -524,25 +524,28 @@ function drawRect(ann) {
   ctx.beginPath(); ctx.roundRect(x, y, w, h, 3); ctx.stroke()
 }
 
-// ── Timeline markers ──────────────────────────────────────
+// ── Timeline markers (color = annotation drawing color) ───
 function updateTimelineMarkers() {
   document.querySelectorAll('.tl-marker').forEach(m => m.remove())
   if (!video.duration) return
 
-  const seen = new Set()
+  // Group by 0.5s bucket — last annotation in each bucket sets the color
+  const buckets = new Map()
   for (const ann of ds.annotations) {
-    if (ann.duration === -1) continue // skip "always visible" from markers
-    const bucket = Math.round(ann.timestamp * 2) // 0.5s resolution
-    if (seen.has(bucket)) continue
-    seen.add(bucket)
+    const bucket = Math.round(ann.timestamp * 2)
+    buckets.set(bucket, ann) // overwrite → last added color wins
+  }
 
+  for (const [, ann] of buckets) {
     const pct    = (ann.timestamp / video.duration) * 100
     const marker = document.createElement('div')
-    marker.className = 'tl-marker'
-    marker.style.left = pct + '%'
-    marker.title = 'Anotacao em ' + formatTime(ann.timestamp)
+    marker.className       = 'tl-marker'
+    marker.style.left      = pct + '%'
+    marker.style.background = ann.color
+    marker.style.boxShadow  = `0 0 7px ${ann.color}dd, 0 0 2px ${ann.color}`
+    marker.title           = formatTime(ann.timestamp)
 
-    // Click marker → jump to annotation
+    // Click marker → jump to that annotation
     marker.addEventListener('click', ev => {
       ev.stopPropagation()
       video.currentTime = ann.timestamp
@@ -553,6 +556,7 @@ function updateTimelineMarkers() {
     progressBar.appendChild(marker)
   }
 }
+
 
 // ── Annotation count badge on edit button ─────────────────
 function updateAnnotationBadge() {
