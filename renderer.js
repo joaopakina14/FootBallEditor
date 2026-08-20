@@ -694,7 +694,7 @@ canvas.addEventListener('mouseup', async e => {
     } else {
       ann.timestamp = video.currentTime || 0; ann.duration = ds.duration
 
-      // ★ Check Dual Attachment (Line/Arrow connecting TWO tracked players)
+      // ★ Check Dual Attachment (Line/Arrow/Circle/Rect connecting TWO tracked players)
       if (ann.tool !== 'pencil' && ann.x1 !== undefined && ann.x2 !== undefined) {
         const attachStart = findTouchingTrack(ann.x1, ann.y1, ann.timestamp)
         const attachEnd   = findTouchingTrack(ann.x2, ann.y2, ann.timestamp)
@@ -704,23 +704,38 @@ canvas.addEventListener('mouseup', async e => {
           ann.attachedTrackEndId   = attachEnd.trackId
           ann.startOffset = { dx: ann.x1 - attachStart.originPos.x, dy: ann.y1 - attachStart.originPos.y }
           ann.endOffset   = { dx: ann.x2 - attachEnd.originPos.x,   dy: ann.y2 - attachEnd.originPos.y }
-          showToast('\uD83D\uDD17 Linha el\u00E1stica ligada aos 2 jogadores!', 2800)
+
+          // ★ Sync duration & timestamp with the longest parent tracker
+          const t1 = ds.annotations.find(a => a.id === attachStart.trackId)
+          const t2 = ds.annotations.find(a => a.id === attachEnd.trackId)
+          if (t1 && t2) {
+            ann.timestamp = Math.min(t1.timestamp, t2.timestamp)
+            ann.duration  = Math.max(t1.duration, t2.duration)
+          }
+
+          showToast('\uD83D\uDD17 Elemento el\u00E1stico ligado aos 2 jogadores!', 2800)
         } else if (attachStart) {
           ann.attachedTrackId = attachStart.trackId
           ann.attachOriginPos = attachStart.originPos
+          const t1 = ds.annotations.find(a => a.id === attachStart.trackId)
+          if (t1) { ann.timestamp = t1.timestamp; ann.duration = t1.duration }
           showToast('\uD83D\uDE97 Anota\u00E7\u00E3o presa ao jogador! Vai de boleia!', 2500)
         } else if (attachEnd) {
           ann.attachedTrackId = attachEnd.trackId
           ann.attachOriginPos = attachEnd.originPos
+          const t2 = ds.annotations.find(a => a.id === attachEnd.trackId)
+          if (t2) { ann.timestamp = t2.timestamp; ann.duration = t2.duration }
           showToast('\uD83D\uDE97 Anota\u00E7\u00E3o presa ao jogador! Vai de boleia!', 2500)
         }
       } else {
-        // Pencil or single point check
+        // Pencil check
         const checkPt = ann.tool === 'pencil' ? ann.points[0] : { x: ann.x1, y: ann.y1 }
         const attachInfo = findTouchingTrack(checkPt.x, checkPt.y, ann.timestamp)
         if (attachInfo) {
           ann.attachedTrackId = attachInfo.trackId
           ann.attachOriginPos = attachInfo.originPos
+          const t1 = ds.annotations.find(a => a.id === attachInfo.trackId)
+          if (t1) { ann.timestamp = t1.timestamp; ann.duration = t1.duration }
           showToast('\uD83D\uDE97 Anota\u00E7\u00E3o presa ao jogador! Vai de boleia!', 2500)
         }
       }
@@ -785,8 +800,8 @@ function renderAnnToCtx(targetCtx, ann) {
         switch (dynAnn.tool) {
           case 'line': case 'dashed': drawLineCtx(targetCtx, dynAnn); break
           case 'arrow':  drawArrowCtx(targetCtx, dynAnn);  break
-          case 'circle': drawCircleCtx(targetCtx, dynAnn); break
-          case 'rect':   drawRectCtx(targetCtx, dynAnn);   break
+          case 'circle': drawElasticCircleCtx(targetCtx, dynAnn); break
+          case 'rect':   drawElasticRectCtx(targetCtx, dynAnn);   break
         }
         targetCtx.restore()
         return
@@ -909,6 +924,40 @@ function drawRectCtx(c, ann) {
   const x=Math.min(ann.x1,ann.x2), y=Math.min(ann.y1,ann.y2)
   const w=Math.abs(ann.x2-ann.x1), h=Math.abs(ann.y2-ann.y1)
   if (w<1||h<1) return; c.beginPath(); c.roundRect(x,y,w,h,3); c.stroke()
+}
+
+function drawElasticCircleCtx(c, ann) {
+  const cx = (ann.x1 + ann.x2) / 2
+  const cy = (ann.y1 + ann.y2) / 2
+  const dx = ann.x2 - ann.x1
+  const dy = ann.y2 - ann.y1
+  const dist = Math.hypot(dx, dy)
+  const rx = Math.max(10, dist / 2)
+  const ry = Math.max(12, rx * 0.45)
+  const angle = Math.atan2(dy, dx)
+
+  c.save()
+  c.beginPath()
+  c.ellipse(cx, cy, rx, ry, angle, 0, Math.PI * 2)
+  c.stroke()
+  c.restore()
+}
+
+function drawElasticRectCtx(c, ann) {
+  const cx = (ann.x1 + ann.x2) / 2
+  const cy = (ann.y1 + ann.y2) / 2
+  const dx = ann.x2 - ann.x1
+  const dy = ann.y2 - ann.y1
+  const dist = Math.hypot(dx, dy)
+  const angle = Math.atan2(dy, dx)
+  const h = Math.max(18, dist * 0.35)
+
+  c.save()
+  c.translate(cx, cy)
+  c.rotate(angle)
+  c.beginPath()
+  c.strokeRect(-dist / 2, -h / 2, dist, h)
+  c.restore()
 }
 
 // Timeline markers
