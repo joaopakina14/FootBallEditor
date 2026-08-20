@@ -83,7 +83,7 @@ function createWindow() {
           })
         }
 
-        // 2. Process animated player tracking overlays
+        // 2. Process animated player tracking overlays (using ultra-fast single FFmpeg filter per track)
         if (hasTracking) {
           trackingOverlays.forEach((track) => {
             const imgFileName = `overlay_spot_${Date.now()}_${inputIdx}.png`
@@ -92,17 +92,11 @@ function createWindow() {
             fs.writeFileSync(imgPath, base64Data, 'base64')
 
             command.input(imgPath)
-            const currentOverlayInput = inputIdx
+            const enableCond = `between(t,${track.startTime.toFixed(2)},${track.endTime.toFixed(2)})`
+            const nextStream = `v${inputIdx}`
+            filterComplex += `[${lastStream}][${inputIdx}:v]overlay=x='${track.exprX}':y='${track.exprY}':enable='${enableCond}'[${nextStream}];`
+            lastStream = nextStream
             inputIdx++
-
-            // Apply each frame point of trajectory
-            track.frames.forEach((pt) => {
-              const enableCond = `between(t,${pt.tStart.toFixed(2)},${pt.tEnd.toFixed(2)})`
-              const nextStream = `v${inputIdx}`
-              filterComplex += `[${lastStream}][${currentOverlayInput}:v]overlay=x=${pt.x}:y=${pt.y}:enable='${enableCond}'[${nextStream}];`
-              lastStream = nextStream
-              inputIdx++
-            })
           })
         }
 

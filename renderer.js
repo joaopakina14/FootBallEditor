@@ -402,7 +402,7 @@ async function doCut() {
     })
   }
 
-  // 2. Generate animated tracking overlays for FFmpeg
+  // 2. Generate animated tracking overlays for FFmpeg (using ultra-fast nested if expressions)
   const trackingOverlays = []
   if (trackAnns.length > 0 && vRect) {
     trackAnns.forEach(ann => {
@@ -433,36 +433,44 @@ async function doCut() {
       sCtx.restore()
 
       const spotlightDataUrl = spotCanvas.toDataURL('image/png')
-      const frames = []
       const relTrackStart = ann.timestamp - startTime
 
-      for (let i = 0; i < ann.trajectory.length; i++) {
-        const pt = ann.trajectory[i]
-        const tStart = relTrackStart + pt.time
-        if (tStart < 0 || tStart > duration) continue
-
-        const tEnd = (i < ann.trajectory.length - 1)
-          ? Math.min(duration, relTrackStart + ann.trajectory[i + 1].time)
-          : Math.min(duration, tStart + 0.1)
-
-        if (tEnd <= tStart) continue
-
-        const nativePx = Math.round(pt.x * vRect.videoWidth - cx)
-        const nativePy = Math.round(pt.y * vRect.videoHeight - cy)
-
-        frames.push({
-          tStart,
-          tEnd,
-          x: nativePx,
-          y: nativePy
-        })
+      // Sample points (step ~0.08s for ultra-lean expression)
+      const pts = []
+      const step = 0.08
+      let nextT = 0
+      for (const pt of ann.trajectory) {
+        if (pt.time >= nextT) {
+          pts.push(pt)
+          nextT += step
+        }
       }
 
-      if (frames.length > 0) {
-        trackingOverlays.push({
-          spotlightDataUrl,
-          frames
-        })
+      if (pts.length > 0) {
+        const lastPt = pts[pts.length - 1]
+        let exprX = `${Math.round(lastPt.x * vRect.videoWidth - cx)}`
+        let exprY = `${Math.round(lastPt.y * vRect.videoHeight - cy)}`
+
+        for (let i = pts.length - 2; i >= 0; i--) {
+          const tBoundary = (relTrackStart + pts[i + 1].time).toFixed(3)
+          const px = Math.round(pts[i].x * vRect.videoWidth - cx)
+          const py = Math.round(pts[i].y * vRect.videoHeight - cy)
+          exprX = `if(lt(t,${tBoundary}),${px},${exprX})`
+          exprY = `if(lt(t,${tBoundary}),${py},${exprY})`
+        }
+
+        const tStart = Math.max(0, relTrackStart)
+        const tEnd   = ann.duration === -1 ? duration : Math.min(duration, relTrackStart + ann.duration)
+
+        if (tEnd > tStart) {
+          trackingOverlays.push({
+            spotlightDataUrl,
+            startTime: tStart,
+            endTime: tEnd,
+            exprX,
+            exprY
+          })
+        }
       }
     })
   }
