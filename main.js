@@ -140,6 +140,31 @@ function createWindow() {
       return { success: false, annotations: [] }
     }
   })
+
+  // ── Track player trajectory using Python + OpenCV CSRT ──────────────
+  ipcMain.handle('track-player', async (event, { videoPath, startTime, duration, bbox }) => {
+    return new Promise((resolve) => {
+      const { execFile } = require('child_process')
+      const scriptPath = path.join(__dirname, 'tracker.py')
+      const bboxJson = JSON.stringify(bbox)
+
+      execFile('python', [scriptPath, videoPath, startTime.toString(), duration.toString(), bboxJson], (error, stdout, stderr) => {
+        if (error) {
+          console.error('Python tracking error:', stderr || error.message)
+          resolve({ success: false, error: stderr || error.message })
+          return
+        }
+
+        try {
+          const result = JSON.parse(stdout.trim())
+          resolve(result)
+        } catch (e) {
+          console.error('Failed to parse Python tracker stdout:', stdout)
+          resolve({ success: false, error: 'Invalid JSON response from tracker script' })
+        }
+      })
+    })
+  })
 }
 
 app.whenReady().then(createWindow)

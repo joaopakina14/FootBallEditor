@@ -523,6 +523,7 @@ canvas.addEventListener('mousedown', e => {
   if (ds.tool === 'pencil') ds.current = { tool: 'pencil', color: ds.color, width: ds.width, points: [pos] }
   else ds.current = { tool: ds.tool, color: ds.color, width: ds.width, x1: pos.x, y1: pos.y, x2: pos.x, y2: pos.y }
 })
+
 canvas.addEventListener('mousemove', e => {
   if (!ds.drawing || !ds.enabled || !ds.current) return
   const pos = getPos(e)
@@ -530,14 +531,57 @@ canvas.addEventListener('mousemove', e => {
   else { ds.current.x2 = pos.x; ds.current.y2 = pos.y }
   redraw()
 })
-canvas.addEventListener('mouseup', e => {
+
+canvas.addEventListener('mouseup', async e => {
   if (!ds.drawing || !ds.current) return; ds.drawing = false
   const ann = ds.current
   const isTiny = ann.tool !== 'pencil' && Math.abs(ann.x2-ann.x1) < 3 && Math.abs(ann.y2-ann.y1) < 3
+
   if (!isTiny) {
-    ann.timestamp = video.currentTime || 0; ann.duration = ds.duration
-    ds.annotations.push(ann); updateTimelineMarkers(); updateAnnotationBadge()
-    scheduleAnnotationSave() // ★ persist
+    if (ann.tool === 'track') {
+      // Handle Player Tracker tool via OpenCV
+      const vRect = getVideoVisualRect()
+      if (vRect && clip.inputPath) {
+        const x1 = Math.min(ann.x1, ann.x2)
+        const y1 = Math.min(ann.y1, ann.y2)
+        const w  = Math.abs(ann.x2 - ann.x1)
+        const h  = Math.abs(ann.y2 - ann.y1)
+
+        // Convert canvas box to normalized video coordinates [0..1]
+        const normX = (x1 - vRect.offsetX) / vRect.displayWidth
+        const normY = (y1 - vRect.offsetY) / vRect.displayHeight
+        const normW = w / vRect.displayWidth
+        const normH = h / vRect.displayHeight
+
+        const trackDuration = ds.duration === -1 ? 6.0 : ds.duration
+
+        showToast('\uD83C\uDFAF A rastrear movimento do jogador com OpenCV...', 0)
+
+        const result = await ipcRenderer.invoke('track-player', {
+          videoPath: clip.inputPath,
+          startTime: video.currentTime || 0,
+          duration: trackDuration,
+          bbox: { x: normX, y: normY, w: normW, h: normH }
+        })
+
+        if (result && result.success && result.trajectory && result.trajectory.length > 0) {
+          ann.timestamp  = video.currentTime || 0
+          ann.duration   = trackDuration
+          ann.trajectory = result.trajectory
+          ds.annotations.push(ann)
+          updateTimelineMarkers()
+          updateAnnotationBadge()
+          scheduleAnnotationSave()
+          showToast(`\u2705 Rastreio conclu\u00EDdo: ${result.totalPoints} pontos gravados!`, 3500)
+        } else {
+          showToast(`\u274C Falha no rastreio: ${result.error || 'Não foi possível seguir o jogador'}`, 4000)
+        }
+      }
+    } else {
+      ann.timestamp = video.currentTime || 0; ann.duration = ds.duration
+      ds.annotations.push(ann); updateTimelineMarkers(); updateAnnotationBadge()
+      scheduleAnnotationSave()
+    }
   }
   ds.current = null; redraw()
 })
@@ -577,8 +621,67 @@ function renderAnnToCtx(targetCtx, ann) {
     case 'arrow':  drawArrowCtx(targetCtx, ann);  break
     case 'circle': drawCircleCtx(targetCtx, ann); break
     case 'rect':   drawRectCtx(targetCtx, ann);   break
+    case 'track':  drawTrackSpotlight(targetCtx, ann); break
   }
   targetCtx.restore()
+}
+
+// ── Draw animated player tracking spotlight ────────────────────────
+function drawTrackSpotlight(c, ann) {
+  const vRect = getVideoVisualRect()
+  if (!vRect) return
+
+  // If currently drawing the bounding box rectangle
+  if (!ann.trajectory) {
+    c.setLineDash([4, 4])
+    c.strokeStyle = '#4f8ef7'
+    const x = Math.min(ann.x1, ann.x2), y = Math.min(ann.y1, ann.y2)
+    const w = Math.abs(ann.x2 - ann.x1), h = Math.abs(ann.y2 - ann.y1)
+    c.strokeRect(x, y, w, h)
+    return
+  }
+
+  // Find trajectory point corresponding to current playback time
+  const currentTime = video.currentTime || 0
+  const relTime = currentTime - ann.timestamp
+  if (relTime < -0.3 || relTime > ann.duration) return
+
+  // Find nearest point in trajectory
+  let point = ann.trajectory[0]
+  for (let i = 0; i < ann.trajectory.length; i++) {
+    if (ann.trajectory[i].time <= relTime) {
+      point = ann.trajectory[i]
+    } else {
+      break
+    }
+  }
+
+  if (!point) return
+
+  // Convert normalized video coords back to target context pixels
+  const px = (point.x * vRect.displayWidth) + vRect.offsetX
+  const py = (point.y * vRect.displayHeight) + vRect.offsetY
+  const pw = (point.w * vRect.displayWidth)
+  const rx = Math.max(16, pw * 0.8)
+  const ry = rx * 0.45
+
+  // Draw glowing ellipse spotlight at player feet
+  c.save()
+  c.beginPath()
+  c.ellipse(px, py, rx, ry, 0, 0, Math.PI * 2)
+  c.strokeStyle = ann.color
+  c.lineWidth = Math.max(3, ann.width)
+  c.shadowColor = ann.color
+  c.shadowBlur = 12
+  c.stroke()
+
+  // Inner fill gradient
+  const grad = c.createRadialGradient(px, py, 2, px, py, rx)
+  grad.addColorStop(0, ann.color + '66')
+  grad.addColorStop(1, ann.color + '00')
+  c.fillStyle = grad
+  c.fill()
+  c.restore()
 }
 
 function drawPencilCtx(c, ann) {
