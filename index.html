@@ -26,9 +26,9 @@
   <!-- Main layout -->
   <div class="app">
 
-    <!-- Empty state / Drop zone -->
+    <!-- Empty state -->
     <div class="empty-state" id="emptyState">
-      <div class="empty-icon">▶</div>
+      <div class="empty-icon">&#9654;</div>
       <h2>Sem vídeo carregado</h2>
       <p>Abre um ficheiro de vídeo para começar</p>
       <button class="btn-open" id="btnOpenEmpty">Abrir Vídeo</button>
@@ -37,17 +37,63 @@
 
     <!-- Video player -->
     <div class="player-wrap" id="playerWrap" style="display:none">
+
+      <!-- Video -->
       <video id="video" tabindex="-1"></video>
 
-      <!-- Overlay for click to play/pause -->
+      <!-- Drawing canvas (on top of video) -->
+      <canvas id="drawCanvas"></canvas>
+
+      <!-- Overlay for click to play/pause (when not drawing) -->
       <div class="video-overlay" id="videoOverlay"></div>
 
-      <!-- Big play icon on click -->
-      <div class="play-flash" id="playFlash">▶</div>
+      <!-- Big play/pause flash -->
+      <div class="play-flash" id="playFlash">&#9654;</div>
+
+      <!-- DRAWING TOOLBAR -->
+      <div class="draw-panel" id="drawPanel">
+
+        <div class="dp-label">Ferramentas</div>
+        <div class="dp-tools-grid">
+          <button class="dp-tool active" data-tool="pencil" title="Lapis">&#9998;</button>
+          <button class="dp-tool" data-tool="line"   title="Linha">&#9585;</button>
+          <button class="dp-tool" data-tool="dashed" title="Tracejado">- -</button>
+          <button class="dp-tool" data-tool="arrow"  title="Seta">&#10145;</button>
+          <button class="dp-tool" data-tool="circle" title="Circulo">&#9711;</button>
+          <button class="dp-tool" data-tool="rect"   title="Retangulo">&#9645;</button>
+        </div>
+
+        <div class="dp-sep"></div>
+        <div class="dp-label">Cor</div>
+        <div class="dp-colors">
+          <div class="dp-color active" data-color="#ffffff" style="background:#ffffff" title="Branco"></div>
+          <div class="dp-color"        data-color="#ffee33" style="background:#ffee33" title="Amarelo"></div>
+          <div class="dp-color"        data-color="#ff4444" style="background:#ff4444" title="Vermelho"></div>
+          <div class="dp-color"        data-color="#44ff88" style="background:#44ff88" title="Verde"></div>
+          <div class="dp-color"        data-color="#4488ff" style="background:#4488ff" title="Azul"></div>
+          <div class="dp-color"        data-color="#ff8844" style="background:#ff8844" title="Laranja"></div>
+          <div class="dp-color"        data-color="#dd44ff" style="background:#dd44ff" title="Roxo"></div>
+          <div class="dp-color"        data-color="#111111" style="background:#111111;border-color:#555" title="Preto"></div>
+        </div>
+
+        <div class="dp-sep"></div>
+        <div class="dp-label">Espessura</div>
+        <div class="dp-widths">
+          <button class="dp-width active" data-width="2" title="Fino"><span class="wline" style="height:2px"></span></button>
+          <button class="dp-width" data-width="4" title="Medio"><span class="wline" style="height:4px"></span></button>
+          <button class="dp-width" data-width="8" title="Grosso"><span class="wline" style="height:8px"></span></button>
+        </div>
+
+        <div class="dp-sep"></div>
+        <div class="dp-actions">
+          <button class="dp-action" id="btnUndo" title="Desfazer (Ctrl+Z)">&#8617; Desfazer</button>
+          <button class="dp-action danger" id="btnClearAll" title="Limpar tudo">&#128465; Limpar</button>
+        </div>
+
+      </div>
 
       <!-- Controls bar -->
       <div class="controls" id="controls">
-        <!-- Progress -->
         <div class="progress-wrap">
           <span class="time-current" id="timeCurrent">0:00</span>
           <div class="progress-bar" id="progressBar">
@@ -56,29 +102,28 @@
           </div>
           <span class="time-total" id="timeTotal">0:00</span>
         </div>
-
-        <!-- Buttons row -->
         <div class="btn-row">
           <div class="btn-left">
-            <button class="ctrl-btn" id="btnOpen" title="Abrir ficheiro">📂</button>
-            <button class="ctrl-btn" id="btnPlayPause" title="Play / Pause">▶</button>
-            <button class="ctrl-btn" id="btnStop" title="Parar">⏹</button>
+            <button class="ctrl-btn" id="btnOpen"      title="Abrir ficheiro">&#128194;</button>
+            <button class="ctrl-btn" id="btnPlayPause" title="Play / Pause">&#9654;</button>
+            <button class="ctrl-btn" id="btnStop"      title="Parar">&#9209;</button>
             <div class="volume-wrap">
-              <button class="ctrl-btn" id="btnMute" title="Mudo">🔊</button>
+              <button class="ctrl-btn" id="btnMute" title="Mudo">&#128266;</button>
               <input type="range" id="volumeSlider" min="0" max="1" step="0.02" value="1" />
             </div>
           </div>
           <div class="btn-center">
-            <span class="filename" id="filenameLabel">—</span>
+            <span class="filename" id="filenameLabel">&#8212;</span>
           </div>
           <div class="btn-right">
-            <button class="ctrl-btn" id="btnSpeed" title="Velocidade">1×</button>
-            <button class="ctrl-btn" id="btnFullscreen" title="Ecrã inteiro">⛶</button>
+            <button class="ctrl-btn" id="btnSpeed"      title="Velocidade">1x</button>
+            <button class="ctrl-btn" id="btnEditMode"   title="Modo de desenho (E)">&#9998;</button>
+            <button class="ctrl-btn" id="btnFullscreen" title="Ecra inteiro">&#9974;</button>
           </div>
         </div>
       </div>
-    </div>
 
+    </div>
   </div>
 
   <script src="renderer.js"></script>

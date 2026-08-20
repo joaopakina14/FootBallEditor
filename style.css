@@ -36,33 +36,17 @@ button { cursor: pointer; border: none; background: none; color: inherit; font-f
   position: relative;
   z-index: 100;
 }
-
 .titlebar-drag {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  display: flex; align-items: center; gap: 8px;
   -webkit-app-region: drag;
 }
-
 .app-logo { font-size: 16px; }
 .app-title { font-size: 13px; font-weight: 500; color: var(--muted); letter-spacing: 0.3px; }
-
-.titlebar-controls {
-  display: flex;
-  gap: 4px;
-  -webkit-app-region: no-drag;
-}
-
+.titlebar-controls { display: flex; gap: 4px; -webkit-app-region: no-drag; }
 .tb-btn {
-  width: 32px;
-  height: 28px;
-  border-radius: 6px;
-  font-size: 13px;
-  color: var(--muted);
+  width: 32px; height: 28px; border-radius: 6px; font-size: 13px; color: var(--muted);
   transition: background 0.15s, color 0.15s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: flex; align-items: center; justify-content: center;
 }
 .tb-btn:hover { background: var(--ctrl-hover); color: var(--text); }
 .tb-btn.close:hover { background: #c0392b; color: #fff; }
@@ -72,9 +56,7 @@ button { cursor: pointer; border: none; background: none; color: inherit; font-f
    ========================================= */
 .app {
   height: calc(100vh - 38px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: flex; align-items: center; justify-content: center;
   position: relative;
 }
 
@@ -82,102 +64,224 @@ button { cursor: pointer; border: none; background: none; color: inherit; font-f
    EMPTY STATE
    ========================================= */
 .empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  text-align: center;
-  animation: fadeIn 0.4s ease;
+  display: flex; flex-direction: column; align-items: center;
+  gap: 12px; text-align: center; animation: fadeIn 0.4s ease;
 }
-
 .empty-icon {
-  width: 80px;
-  height: 80px;
-  border-radius: 50%;
+  width: 80px; height: 80px; border-radius: 50%;
   background: linear-gradient(135deg, var(--accent), var(--accent2));
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 30px;
-  color: white;
-  margin-bottom: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 30px; color: white; margin-bottom: 8px;
   box-shadow: 0 0 40px rgba(79,142,247,0.3);
 }
-
 .empty-state h2 { font-size: 20px; font-weight: 600; }
 .empty-state p { color: var(--muted); font-size: 14px; }
-
 .btn-open {
-  margin-top: 6px;
-  padding: 10px 28px;
-  border-radius: 8px;
+  margin-top: 6px; padding: 10px 28px; border-radius: 8px;
   background: linear-gradient(135deg, var(--accent), var(--accent2));
-  color: white;
-  font-size: 14px;
-  font-weight: 500;
+  color: white; font-size: 14px; font-weight: 500;
   transition: opacity 0.2s, transform 0.15s;
   box-shadow: 0 4px 20px rgba(79,142,247,0.35);
 }
 .btn-open:hover { opacity: 0.88; transform: translateY(-1px); }
 .btn-open:active { transform: translateY(0); }
-
 .formats { font-size: 12px; color: var(--border); margin-top: 4px; letter-spacing: 0.8px; }
 
 /* =========================================
    PLAYER WRAPPER
    ========================================= */
 .player-wrap {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  background: #000;
+  position: relative; width: 100%; height: 100%;
+  display: flex; flex-direction: column; background: #000;
 }
-
 video {
-  flex: 1;
-  width: 100%;
-  height: calc(100% - var(--bar-h));
-  object-fit: contain;
-  background: #000;
-  display: block;
-  outline: none;
+  flex: 1; width: 100%; height: calc(100% - var(--bar-h));
+  object-fit: contain; background: #000; display: block; outline: none;
 }
 
-/* Overlay (invisible, captures clicks) */
-.video-overlay {
+/* Canvas overlay */
+#drawCanvas {
   position: absolute;
   top: 0; left: 0;
   width: 100%;
   height: calc(100% - var(--bar-h));
-  cursor: pointer;
-  z-index: 2;
+  pointer-events: none;
+  z-index: 3;
+}
+#drawCanvas.edit-mode {
+  pointer-events: all;
+  cursor: crosshair;
+}
+#drawCanvas.edit-mode.tool-pencil  { cursor: crosshair; }
+#drawCanvas.edit-mode.tool-line    { cursor: crosshair; }
+#drawCanvas.edit-mode.tool-dashed  { cursor: crosshair; }
+#drawCanvas.edit-mode.tool-arrow   { cursor: crosshair; }
+#drawCanvas.edit-mode.tool-circle  { cursor: crosshair; }
+#drawCanvas.edit-mode.tool-rect    { cursor: crosshair; }
+
+/* Overlay (play/pause clicks) */
+.video-overlay {
+  position: absolute; top: 0; left: 0;
+  width: 100%; height: calc(100% - var(--bar-h));
+  cursor: pointer; z-index: 2;
 }
 
 /* Big play/pause flash */
 .play-flash {
-  position: absolute;
-  top: 50%;
-  left: 50%;
+  position: absolute; top: 50%; left: 50%;
   transform: translate(-50%, -50%) scale(0);
-  font-size: 64px;
-  color: white;
+  font-size: 64px; color: white;
   background: rgba(0,0,0,0.55);
-  width: 100px;
-  height: 100px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  pointer-events: none;
-  z-index: 10;
-  transition: transform 0.08s ease, opacity 0.3s ease;
-  opacity: 0;
+  width: 100px; height: 100px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  pointer-events: none; z-index: 10;
+  transition: transform 0.08s ease, opacity 0.3s ease; opacity: 0;
 }
-.play-flash.show {
-  transform: translate(-50%, -50%) scale(1);
-  opacity: 1;
+.play-flash.show { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+
+/* =========================================
+   DRAWING PANEL
+   ========================================= */
+.draw-panel {
+  position: absolute;
+  left: 12px;
+  top: calc(50% - 44px);
+  transform: translateY(-50%);
+  width: 70px;
+  background: rgba(13, 13, 20, 0.88);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255,255,255,0.09);
+  border-radius: 14px;
+  padding: 10px 6px;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  z-index: 20;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.55), 0 0 0 1px rgba(79,142,247,0.15);
+}
+.draw-panel.visible {
+  display: flex;
+  animation: slideInLeft 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Panel label */
+.dp-label {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--muted);
+  width: 100%;
+  text-align: center;
+}
+
+/* Separator */
+.dp-sep {
+  width: 80%;
+  height: 1px;
+  background: var(--border);
+  margin: 2px 0;
+}
+
+/* Tools grid (2 columns) */
+.dp-tools-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3px;
+  width: 100%;
+}
+.dp-tool {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 8px;
+  font-size: 14px;
+  background: var(--ctrl-bg);
+  color: var(--text);
+  transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
+  display: flex; align-items: center; justify-content: center;
+}
+.dp-tool:hover { background: var(--ctrl-hover); transform: scale(1.06); }
+.dp-tool.active {
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  color: white;
+  box-shadow: 0 2px 10px rgba(79,142,247,0.4);
+}
+
+/* Colors grid */
+.dp-colors {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  width: 100%;
+}
+.dp-color {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.15);
+  cursor: pointer;
+  transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s;
+}
+.dp-color:hover { transform: scale(1.15); border-color: rgba(255,255,255,0.5); }
+.dp-color.active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent);
+  transform: scale(1.1);
+}
+
+/* Width buttons */
+.dp-widths {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  width: 100%;
+}
+.dp-width {
+  width: 100%;
+  height: 28px;
+  border-radius: 6px;
+  background: var(--ctrl-bg);
+  display: flex; align-items: center; justify-content: center;
+  padding: 0 6px;
+  transition: background 0.15s;
+}
+.dp-width:hover { background: var(--ctrl-hover); }
+.dp-width.active { background: linear-gradient(135deg, var(--accent), var(--accent2)); }
+.wline {
+  display: block;
+  width: 36px;
+  border-radius: 99px;
+  background: white;
+}
+
+/* Action buttons */
+.dp-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  width: 100%;
+}
+.dp-action {
+  width: 100%;
+  padding: 5px 4px;
+  border-radius: 7px;
+  font-size: 10px;
+  font-weight: 500;
+  background: var(--ctrl-bg);
+  color: var(--text);
+  transition: background 0.15s, transform 0.1s;
+  text-align: center;
+}
+.dp-action:hover { background: var(--ctrl-hover); transform: scale(1.03); }
+.dp-action.danger:hover { background: rgba(192,57,43,0.4); color: #ff6b6b; }
+
+/* Active edit mode button in controls bar */
+.ctrl-btn.active {
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  color: white;
+  box-shadow: 0 2px 10px rgba(79,142,247,0.4);
 }
 
 /* =========================================
@@ -188,118 +292,63 @@ video {
   background: var(--surface);
   border-top: 1px solid var(--border);
   padding: 8px 16px 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+  display: flex; flex-direction: column; gap: 6px;
   z-index: 5;
 }
 
 /* Progress row */
-.progress-wrap {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
+.progress-wrap { display: flex; align-items: center; gap: 10px; }
 .time-current, .time-total {
-  font-size: 12px;
-  font-variant-numeric: tabular-nums;
-  color: var(--muted);
-  min-width: 36px;
-  text-align: center;
+  font-size: 12px; font-variant-numeric: tabular-nums;
+  color: var(--muted); min-width: 36px; text-align: center;
 }
-
 .progress-bar {
-  flex: 1;
-  height: 4px;
-  background: var(--border);
-  border-radius: 99px;
-  position: relative;
-  cursor: pointer;
+  flex: 1; height: 4px; background: var(--border);
+  border-radius: 99px; position: relative; cursor: pointer;
   transition: height 0.15s;
 }
 .progress-bar:hover { height: 6px; }
-
 .progress-fill {
-  height: 100%;
-  width: 0%;
+  height: 100%; width: 0%;
   background: linear-gradient(90deg, var(--accent), var(--accent2));
-  border-radius: 99px;
-  pointer-events: none;
-  transition: width 0.1s linear;
+  border-radius: 99px; pointer-events: none; transition: width 0.1s linear;
 }
-
 .progress-thumb {
-  position: absolute;
-  top: 50%;
-  left: 0%;
+  position: absolute; top: 50%; left: 0%;
   transform: translate(-50%, -50%) scale(0);
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: var(--accent);
-  pointer-events: none;
-  transition: transform 0.15s;
+  width: 12px; height: 12px; border-radius: 50%; background: var(--accent);
+  pointer-events: none; transition: transform 0.15s;
   box-shadow: 0 0 6px rgba(79,142,247,0.6);
 }
 .progress-bar:hover .progress-thumb { transform: translate(-50%, -50%) scale(1); }
 
 /* Buttons row */
-.btn-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
+.btn-row { display: flex; align-items: center; justify-content: space-between; }
 .btn-left, .btn-right { display: flex; align-items: center; gap: 4px; }
 .btn-center { flex: 1; display: flex; justify-content: center; }
-
 .ctrl-btn {
-  width: 36px;
-  height: 34px;
-  border-radius: 7px;
-  font-size: 16px;
-  background: var(--ctrl-bg);
-  color: var(--text);
-  transition: background 0.15s, transform 0.1s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  width: 36px; height: 34px; border-radius: 7px; font-size: 16px;
+  background: var(--ctrl-bg); color: var(--text);
+  transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
+  display: flex; align-items: center; justify-content: center;
 }
 .ctrl-btn:hover { background: var(--ctrl-hover); }
 .ctrl-btn:active { transform: scale(0.93); }
-
-/* Speed button is text-based */
 #btnSpeed { font-size: 12px; font-weight: 600; width: 42px; letter-spacing: -0.5px; }
 
 /* Volume */
 .volume-wrap { display: flex; align-items: center; gap: 6px; }
 #volumeSlider {
-  -webkit-appearance: none;
-  width: 72px;
-  height: 4px;
-  border-radius: 99px;
-  background: var(--border);
-  outline: none;
-  cursor: pointer;
+  -webkit-appearance: none; width: 72px; height: 4px;
+  border-radius: 99px; background: var(--border); outline: none; cursor: pointer;
 }
 #volumeSlider::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: var(--accent);
-  cursor: pointer;
+  -webkit-appearance: none; width: 12px; height: 12px;
+  border-radius: 50%; background: var(--accent); cursor: pointer;
 }
-
-/* Filename label */
 .filename {
-  font-size: 12px;
-  color: var(--muted);
-  max-width: 300px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  font-size: 12px; color: var(--muted);
+  max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 
 /* =========================================
@@ -307,17 +356,14 @@ video {
    ========================================= */
 .player-wrap:fullscreen video { height: 100%; }
 .player-wrap:fullscreen .controls {
-  position: absolute;
-  bottom: 0; left: 0; right: 0;
-  background: rgba(13,13,15,0.9);
-  backdrop-filter: blur(8px);
-  transform: translateY(100%);
-  transition: transform 0.25s ease;
+  position: absolute; bottom: 0; left: 0; right: 0;
+  background: rgba(13,13,15,0.9); backdrop-filter: blur(8px);
+  transform: translateY(100%); transition: transform 0.25s ease;
 }
 .player-wrap:fullscreen:hover .controls,
-.player-wrap:fullscreen.show-ctrl .controls {
-  transform: translateY(0);
-}
+.player-wrap:fullscreen.show-ctrl .controls { transform: translateY(0); }
+.player-wrap:fullscreen #drawCanvas { height: 100%; }
+.player-wrap:fullscreen .video-overlay { height: 100%; }
 
 /* =========================================
    ANIMATIONS
@@ -325,4 +371,8 @@ video {
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(12px); }
   to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes slideInLeft {
+  from { opacity: 0; transform: translateY(-50%) translateX(-16px) scale(0.9); }
+  to   { opacity: 1; transform: translateY(-50%) translateX(0) scale(1); }
 }

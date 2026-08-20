@@ -14,6 +14,7 @@ const btnOpenEmpty  = document.getElementById('btnOpenEmpty')
 const btnMute       = document.getElementById('btnMute')
 const btnFullscreen = document.getElementById('btnFullscreen')
 const btnSpeed      = document.getElementById('btnSpeed')
+const btnEditMode   = document.getElementById('btnEditMode')
 const volumeSlider  = document.getElementById('volumeSlider')
 const progressBar   = document.getElementById('progressBar')
 const progressFill  = document.getElementById('progressFill')
@@ -29,7 +30,7 @@ document.getElementById('btn-close').addEventListener('click',    () => ipcRende
 
 // ── State ─────────────────────────────────────────────────
 const speeds = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2]
-let speedIdx = 3 // 1×
+let speedIdx = 3
 let scrubbing = false
 
 // ── Open file ─────────────────────────────────────────────
@@ -40,7 +41,6 @@ async function openFile() {
 }
 
 function loadVideo(filePath) {
-  // Convert Windows path to file URL
   const fileUrl = 'file:///' + filePath.replace(/\\/g, '/')
   video.src = fileUrl
   video.load()
@@ -48,6 +48,7 @@ function loadVideo(filePath) {
   filenameLabel.textContent = path.basename(filePath)
   emptyState.style.display = 'none'
   playerWrap.style.display = 'flex'
+  setTimeout(resizeCanvas, 100)
 }
 
 btnOpen.addEventListener('click', openFile)
@@ -71,14 +72,14 @@ function togglePlay() {
 }
 
 function flashIcon() {
-  playFlash.textContent = video.paused ? '⏸' : '▶'
+  playFlash.textContent = video.paused ? '\u23F8' : '\u25B6'
   playFlash.classList.add('show')
   clearTimeout(playFlash._timer)
   playFlash._timer = setTimeout(() => playFlash.classList.remove('show'), 600)
 }
 
-video.addEventListener('play',  () => { btnPlayPause.textContent = '⏸' })
-video.addEventListener('pause', () => { btnPlayPause.textContent = '▶' })
+video.addEventListener('play',  () => { btnPlayPause.textContent = '\u23F8' })
+video.addEventListener('pause', () => { btnPlayPause.textContent = '\u25B6' })
 
 // ── Stop ──────────────────────────────────────────────────
 btnStop.addEventListener('click', () => {
@@ -97,6 +98,7 @@ video.addEventListener('timeupdate', () => {
 
 video.addEventListener('loadedmetadata', () => {
   timeTotal.textContent = formatTime(video.duration)
+  resizeCanvas()
 })
 
 function updateProgress(pct) {
@@ -139,21 +141,16 @@ btnMute.addEventListener('click', () => {
 })
 
 function updateMuteIcon() {
-  if (video.muted || video.volume === 0) {
-    btnMute.textContent = '🔇'
-  } else if (video.volume < 0.5) {
-    btnMute.textContent = '🔉'
-  } else {
-    btnMute.textContent = '🔊'
-  }
+  if (video.muted || video.volume === 0) btnMute.textContent = '\uD83D\uDD07'
+  else if (video.volume < 0.5)           btnMute.textContent = '\uD83D\uDD09'
+  else                                   btnMute.textContent = '\uD83D\uDD0A'
 }
 
 // ── Playback speed ────────────────────────────────────────
 btnSpeed.addEventListener('click', () => {
   speedIdx = (speedIdx + 1) % speeds.length
   video.playbackRate = speeds[speedIdx]
-  const label = speeds[speedIdx] === 1 ? '1×' : speeds[speedIdx] + '×'
-  btnSpeed.textContent = label
+  btnSpeed.textContent = speeds[speedIdx] === 1 ? '1x' : speeds[speedIdx] + 'x'
 })
 
 // ── Fullscreen ────────────────────────────────────────────
@@ -161,18 +158,14 @@ btnFullscreen.addEventListener('click', toggleFullscreen)
 videoOverlay.addEventListener('dblclick', toggleFullscreen)
 
 function toggleFullscreen() {
-  if (!document.fullscreenElement) {
-    playerWrap.requestFullscreen()
-  } else {
-    document.exitFullscreen()
-  }
+  if (!document.fullscreenElement) playerWrap.requestFullscreen()
+  else document.exitFullscreen()
 }
 
 document.addEventListener('fullscreenchange', () => {
-  btnFullscreen.textContent = document.fullscreenElement ? '⛶' : '⛶'
+  setTimeout(resizeCanvas, 100)
 })
 
-// Show controls on mouse move in fullscreen
 let hideCtrlTimer
 document.addEventListener('mousemove', () => {
   playerWrap.classList.add('show-ctrl')
@@ -182,16 +175,20 @@ document.addEventListener('mousemove', () => {
 
 // ── Keyboard shortcuts ────────────────────────────────────
 document.addEventListener('keydown', e => {
+  // Drawing shortcuts
+  if (e.code === 'KeyE' && !e.ctrlKey) { toggleEditMode(); return }
+  if (e.code === 'KeyZ' && e.ctrlKey)  { undoDraw(); return }
+
   if (!video.src) return
   switch (e.code) {
-    case 'Space':         e.preventDefault(); togglePlay(); break
-    case 'ArrowRight':    e.preventDefault(); video.currentTime += 5; break
-    case 'ArrowLeft':     e.preventDefault(); video.currentTime -= 5; break
-    case 'ArrowUp':       e.preventDefault(); video.volume = Math.min(1, video.volume + 0.1); volumeSlider.value = video.volume; updateMuteIcon(); break
-    case 'ArrowDown':     e.preventDefault(); video.volume = Math.max(0, video.volume - 0.1); volumeSlider.value = video.volume; updateMuteIcon(); break
-    case 'KeyM':          btnMute.click(); break
-    case 'KeyF':          toggleFullscreen(); break
-    case 'KeyO':          openFile(); break
+    case 'Space':      e.preventDefault(); togglePlay(); break
+    case 'ArrowRight': e.preventDefault(); video.currentTime += 5; break
+    case 'ArrowLeft':  e.preventDefault(); video.currentTime -= 5; break
+    case 'ArrowUp':    e.preventDefault(); video.volume = Math.min(1, video.volume + 0.1); volumeSlider.value = video.volume; updateMuteIcon(); break
+    case 'ArrowDown':  e.preventDefault(); video.volume = Math.max(0, video.volume - 0.1); volumeSlider.value = video.volume; updateMuteIcon(); break
+    case 'KeyM':       btnMute.click(); break
+    case 'KeyF':       toggleFullscreen(); break
+    case 'KeyO':       openFile(); break
   }
 })
 
@@ -203,4 +200,279 @@ function formatTime(s) {
   const sec = Math.floor(s % 60).toString().padStart(2, '0')
   if (h > 0) return `${h}:${m.toString().padStart(2, '0')}:${sec}`
   return `${m}:${sec}`
+}
+
+// ══════════════════════════════════════════════════════════
+//  DRAWING MODULE
+// ══════════════════════════════════════════════════════════
+
+const canvas   = document.getElementById('drawCanvas')
+const ctx      = canvas.getContext('2d')
+const drawPanel = document.getElementById('drawPanel')
+
+// ── Drawing state ─────────────────────────────────────────
+const ds = {
+  enabled:     false,
+  tool:        'pencil',
+  color:       '#ffffff',
+  width:       2,
+  annotations: [],   // committed annotations
+  current:     null, // annotation being drawn right now
+  drawing:     false
+}
+
+// ── Canvas resize ─────────────────────────────────────────
+function resizeCanvas() {
+  const dpr  = window.devicePixelRatio || 1
+  const rect = video.getBoundingClientRect()
+  if (!rect.width || !rect.height) return
+
+  // Preserve existing drawings
+  const saved = [...ds.annotations]
+
+  canvas.width  = rect.width  * dpr
+  canvas.height = rect.height * dpr
+  canvas.style.width  = rect.width  + 'px'
+  canvas.style.height = rect.height + 'px'
+  ctx.scale(dpr, dpr)
+
+  ds.annotations = saved
+  redraw()
+}
+
+window.addEventListener('resize', resizeCanvas)
+
+// ── Edit mode toggle ──────────────────────────────────────
+function toggleEditMode() {
+  ds.enabled = !ds.enabled
+  drawPanel.classList.toggle('visible', ds.enabled)
+  canvas.classList.toggle('edit-mode', ds.enabled)
+  btnEditMode.classList.toggle('active', ds.enabled)
+
+  // In edit mode, pause to draw comfortably
+  if (ds.enabled) {
+    if (!video.paused) video.pause()
+    resizeCanvas()
+    updateCanvasCursor()
+  }
+}
+
+btnEditMode.addEventListener('click', toggleEditMode)
+
+// ── Tool selection ────────────────────────────────────────
+document.querySelectorAll('.dp-tool[data-tool]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.dp-tool[data-tool]').forEach(b => b.classList.remove('active'))
+    btn.classList.add('active')
+    ds.tool = btn.dataset.tool
+    updateCanvasCursor()
+  })
+})
+
+function updateCanvasCursor() {
+  canvas.className = canvas.classList.contains('edit-mode')
+    ? 'edit-mode tool-' + ds.tool
+    : ''
+}
+
+// ── Color selection ───────────────────────────────────────
+document.querySelectorAll('.dp-color').forEach(swatch => {
+  swatch.addEventListener('click', () => {
+    document.querySelectorAll('.dp-color').forEach(s => s.classList.remove('active'))
+    swatch.classList.add('active')
+    ds.color = swatch.dataset.color
+  })
+})
+
+// ── Width selection ───────────────────────────────────────
+document.querySelectorAll('.dp-width').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.dp-width').forEach(b => b.classList.remove('active'))
+    btn.classList.add('active')
+    ds.width = parseInt(btn.dataset.width)
+  })
+})
+
+// ── Undo & Clear ──────────────────────────────────────────
+function undoDraw() {
+  if (ds.annotations.length > 0) {
+    ds.annotations.pop()
+    redraw()
+  }
+}
+
+document.getElementById('btnUndo').addEventListener('click', undoDraw)
+document.getElementById('btnClearAll').addEventListener('click', () => {
+  ds.annotations = []
+  ds.current = null
+  redraw()
+})
+
+// ── Mouse events ──────────────────────────────────────────
+canvas.addEventListener('mousedown', e => {
+  if (!ds.enabled) return
+  e.preventDefault()
+  ds.drawing = true
+  const pos = getPos(e)
+
+  if (ds.tool === 'pencil') {
+    ds.current = { tool: 'pencil', color: ds.color, width: ds.width, points: [pos] }
+  } else {
+    ds.current = {
+      tool: ds.tool, color: ds.color, width: ds.width,
+      x1: pos.x, y1: pos.y, x2: pos.x, y2: pos.y
+    }
+  }
+})
+
+canvas.addEventListener('mousemove', e => {
+  if (!ds.drawing || !ds.enabled || !ds.current) return
+  const pos = getPos(e)
+
+  if (ds.tool === 'pencil') {
+    ds.current.points.push(pos)
+  } else {
+    ds.current.x2 = pos.x
+    ds.current.y2 = pos.y
+  }
+  redraw()
+})
+
+canvas.addEventListener('mouseup', e => {
+  if (!ds.drawing || !ds.current) return
+  ds.drawing = false
+  // Only save if there's meaningful content
+  const ann = ds.current
+  const isTiny = ann.tool !== 'pencil'
+    && Math.abs(ann.x2 - ann.x1) < 3
+    && Math.abs(ann.y2 - ann.y1) < 3
+  if (!isTiny) ds.annotations.push(ann)
+  ds.current = null
+  redraw()
+})
+
+canvas.addEventListener('mouseleave', () => {
+  if (ds.drawing && ds.current && ds.tool === 'pencil') {
+    ds.annotations.push(ds.current)
+    ds.current = null
+    ds.drawing = false
+    redraw()
+  }
+})
+
+// ── Coordinate helper ─────────────────────────────────────
+function getPos(e) {
+  const rect = canvas.getBoundingClientRect()
+  return { x: e.clientX - rect.left, y: e.clientY - rect.top }
+}
+
+// ── Redraw all annotations ────────────────────────────────
+function redraw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height)
+  for (const ann of ds.annotations) renderAnn(ann)
+  if (ds.current) renderAnn(ds.current)
+}
+
+// ── Render a single annotation ────────────────────────────
+function renderAnn(ann) {
+  ctx.save()
+  ctx.strokeStyle = ann.color
+  ctx.fillStyle   = ann.color
+  ctx.lineWidth   = ann.width
+  ctx.lineCap     = 'round'
+  ctx.lineJoin    = 'round'
+  ctx.setLineDash(ann.tool === 'dashed' ? [ann.width * 4, ann.width * 2.5] : [])
+
+  switch (ann.tool) {
+    case 'pencil': drawPencil(ann); break
+    case 'line':
+    case 'dashed': drawLine(ann);   break
+    case 'arrow':  drawArrow(ann);  break
+    case 'circle': drawCircle(ann); break
+    case 'rect':   drawRect(ann);   break
+  }
+  ctx.restore()
+}
+
+// ── Drawing primitives ────────────────────────────────────
+function drawPencil(ann) {
+  if (ann.points.length === 0) return
+  if (ann.points.length === 1) {
+    ctx.beginPath()
+    ctx.arc(ann.points[0].x, ann.points[0].y, ann.width / 2, 0, Math.PI * 2)
+    ctx.fill()
+    return
+  }
+  ctx.beginPath()
+  ctx.moveTo(ann.points[0].x, ann.points[0].y)
+  for (let i = 1; i < ann.points.length - 1; i++) {
+    const mx = (ann.points[i].x + ann.points[i + 1].x) / 2
+    const my = (ann.points[i].y + ann.points[i + 1].y) / 2
+    ctx.quadraticCurveTo(ann.points[i].x, ann.points[i].y, mx, my)
+  }
+  const last = ann.points[ann.points.length - 1]
+  ctx.lineTo(last.x, last.y)
+  ctx.stroke()
+}
+
+function drawLine(ann) {
+  ctx.beginPath()
+  ctx.moveTo(ann.x1, ann.y1)
+  ctx.lineTo(ann.x2, ann.y2)
+  ctx.stroke()
+}
+
+function drawArrow(ann) {
+  const { x1, y1, x2, y2, width } = ann
+  const dx = x2 - x1
+  const dy = y2 - y1
+  const len = Math.sqrt(dx * dx + dy * dy)
+  if (len < 2) return
+
+  const headLen = Math.max(14, width * 4)
+  const angle   = Math.atan2(dy, dx)
+  const spread  = Math.PI / 7
+
+  // Shaft
+  ctx.beginPath()
+  ctx.moveTo(x1, y1)
+  ctx.lineTo(x2, y2)
+  ctx.stroke()
+
+  // Arrowhead (filled)
+  ctx.setLineDash([])
+  ctx.beginPath()
+  ctx.moveTo(x2, y2)
+  ctx.lineTo(
+    x2 - headLen * Math.cos(angle - spread),
+    y2 - headLen * Math.sin(angle - spread)
+  )
+  ctx.lineTo(
+    x2 - headLen * Math.cos(angle + spread),
+    y2 - headLen * Math.sin(angle + spread)
+  )
+  ctx.closePath()
+  ctx.fill()
+}
+
+function drawCircle(ann) {
+  const cx = (ann.x1 + ann.x2) / 2
+  const cy = (ann.y1 + ann.y2) / 2
+  const rx = Math.abs(ann.x2 - ann.x1) / 2
+  const ry = Math.abs(ann.y2 - ann.y1) / 2
+  if (rx < 1 && ry < 1) return
+  ctx.beginPath()
+  ctx.ellipse(cx, cy, Math.max(rx, 1), Math.max(ry, 1), 0, 0, Math.PI * 2)
+  ctx.stroke()
+}
+
+function drawRect(ann) {
+  const x = Math.min(ann.x1, ann.x2)
+  const y = Math.min(ann.y1, ann.y2)
+  const w = Math.abs(ann.x2 - ann.x1)
+  const h = Math.abs(ann.y2 - ann.y1)
+  if (w < 1 || h < 1) return
+  ctx.beginPath()
+  ctx.roundRect(x, y, w, h, 3)
+  ctx.stroke()
 }
