@@ -13,7 +13,7 @@
   <!-- Custom title bar -->
   <div class="titlebar" id="titlebar">
     <div class="titlebar-drag">
-      <span class="app-logo">⚽</span>
+      <span class="app-logo">&#9917;</span>
       <span class="app-title">FootBall Editor</span>
     </div>
     <div class="titlebar-controls">
@@ -29,28 +29,27 @@
     <!-- Empty state -->
     <div class="empty-state" id="emptyState">
       <div class="empty-icon">&#9654;</div>
-      <h2>Sem vídeo carregado</h2>
-      <p>Abre um ficheiro de vídeo para começar</p>
-      <button class="btn-open" id="btnOpenEmpty">Abrir Vídeo</button>
-      <p class="formats">MP4 · MKV · AVI · MOV · WMV · WebM e mais</p>
+      <h2>Sem v&#237;deo carregado</h2>
+      <p>Abre um ficheiro de v&#237;deo para come&#231;ar</p>
+      <button class="btn-open" id="btnOpenEmpty">Abrir V&#237;deo</button>
+      <p class="formats">MP4 &#183; MKV &#183; AVI &#183; MOV &#183; WMV &#183; WebM e mais</p>
     </div>
 
     <!-- Video player -->
     <div class="player-wrap" id="playerWrap" style="display:none">
 
-      <!-- Video -->
       <video id="video" tabindex="-1"></video>
 
-      <!-- Drawing canvas (on top of video) -->
+      <!-- Drawing canvas -->
       <canvas id="drawCanvas"></canvas>
 
-      <!-- Overlay for click to play/pause (when not drawing) -->
+      <!-- Click overlay (play/pause) -->
       <div class="video-overlay" id="videoOverlay"></div>
 
-      <!-- Big play/pause flash -->
+      <!-- Play/pause flash -->
       <div class="play-flash" id="playFlash">&#9654;</div>
 
-      <!-- DRAWING TOOLBAR -->
+      <!-- ═══ DRAWING TOOLBAR ═══ -->
       <div class="draw-panel" id="drawPanel">
 
         <div class="dp-label">Ferramentas</div>
@@ -85,12 +84,22 @@
         </div>
 
         <div class="dp-sep"></div>
+        <div class="dp-label">Dura&#231;&#227;o</div>
+        <div class="dp-durations">
+          <button class="dp-dur" data-dur="2" title="Visivel por 2 segundos">2s</button>
+          <button class="dp-dur active" data-dur="4" title="Visivel por 4 segundos">4s</button>
+          <button class="dp-dur" data-dur="8" title="Visivel por 8 segundos">8s</button>
+          <button class="dp-dur" data-dur="-1" title="Sempre visivel">&#8734;</button>
+        </div>
+
+        <div class="dp-sep"></div>
         <div class="dp-actions">
           <button class="dp-action" id="btnUndo" title="Desfazer (Ctrl+Z)">&#8617; Desfazer</button>
           <button class="dp-action danger" id="btnClearAll" title="Limpar tudo">&#128465; Limpar</button>
         </div>
 
       </div>
+      <!-- ══════════════════════ -->
 
       <!-- Controls bar -->
       <div class="controls" id="controls">
