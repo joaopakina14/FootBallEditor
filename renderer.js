@@ -590,6 +590,45 @@ document.getElementById('btnClearAll').addEventListener('click', () => {
   scheduleAnnotationSave() // ★ persist change
 })
 
+// Helper: get current center position of a track annotation at time t
+function getTrackCenterAtTime(trackAnn, t) {
+  if (!trackAnn.trajectory || trackAnn.trajectory.length === 0) return null
+  const relTime = t - trackAnn.timestamp
+  if (relTime < -0.3 || relTime > trackAnn.duration) return null
+
+  let point = trackAnn.trajectory[0]
+  for (let i = 0; i < trackAnn.trajectory.length; i++) {
+    if (trackAnn.trajectory[i].time <= relTime) point = trackAnn.trajectory[i]
+    else break
+  }
+
+  const vRect = getVideoVisualRect()
+  if (!vRect || !point) return null
+
+  return {
+    x: (point.x * vRect.displayWidth) + vRect.offsetX,
+    y: (point.y * vRect.displayHeight) + vRect.offsetY,
+    pw: point.w * vRect.displayWidth
+  }
+}
+
+// Helper: check if a point (x, y) touches a track spotlight at time t
+function findTouchingTrack(px, py, t) {
+  for (const ann of ds.annotations) {
+    if (ann.tool === 'track' && ann.trajectory) {
+      const pos = getTrackCenterAtTime(ann, t)
+      if (pos) {
+        const radius = Math.max(35, pos.pw * 1.2)
+        const dist = Math.hypot(px - pos.x, py - pos.y)
+        if (dist <= radius) {
+          return { trackId: ann.id, originPos: pos }
+        }
+      }
+    }
+  }
+  return null
+}
+
 // Mouse drawing
 canvas.addEventListener('mousedown', e => {
   if (!ds.enabled) return; e.preventDefault(); ds.drawing = true
@@ -612,6 +651,8 @@ canvas.addEventListener('mouseup', async e => {
   const isTiny = ann.tool !== 'pencil' && Math.abs(ann.x2-ann.x1) < 3 && Math.abs(ann.y2-ann.y1) < 3
 
   if (!isTiny) {
+    ann.id = 'ann_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5)
+
     if (ann.tool === 'track') {
       // Handle Player Tracker tool via OpenCV
       const vRect = getVideoVisualRect()
@@ -621,7 +662,6 @@ canvas.addEventListener('mouseup', async e => {
         const w  = Math.abs(ann.x2 - ann.x1)
         const h  = Math.abs(ann.y2 - ann.y1)
 
-        // Convert canvas box to normalized video coordinates [0..1]
         const normX = (x1 - vRect.offsetX) / vRect.displayWidth
         const normY = (y1 - vRect.offsetY) / vRect.displayHeight
         const normW = w / vRect.displayWidth
@@ -653,6 +693,17 @@ canvas.addEventListener('mouseup', async e => {
       }
     } else {
       ann.timestamp = video.currentTime || 0; ann.duration = ds.duration
+
+      // ★ Check if this drawing touches an active player tracker ("Vai de boleia")
+      const checkPt = ann.tool === 'pencil' ? ann.points[0] : { x: ann.x1, y: ann.y1 }
+      const attachInfo = findTouchingTrack(checkPt.x, checkPt.y, ann.timestamp)
+
+      if (attachInfo) {
+        ann.attachedTrackId = attachInfo.trackId
+        ann.attachOriginPos = attachInfo.originPos
+        showToast('\uD83D\uDE97 Anota\u00E7\u00E3o presa ao jogador! Vai de boleia!', 2500)
+      }
+
       ds.annotations.push(ann); updateTimelineMarkers(); updateAnnotationBadge()
       scheduleAnnotationSave()
     }
@@ -686,7 +737,22 @@ function renderAnn(ann) {
 }
 
 function renderAnnToCtx(targetCtx, ann) {
-  targetCtx.save(); targetCtx.strokeStyle = ann.color; targetCtx.fillStyle = ann.color
+  targetCtx.save()
+
+  // ★ If this annotation is attached to a player tracker ("Vai de boleia"), translate context dynamically
+  if (ann.attachedTrackId && ann.attachOriginPos) {
+    const parentTrack = ds.annotations.find(a => a.id === ann.attachedTrackId)
+    if (parentTrack && parentTrack.trajectory) {
+      const currentPos = getTrackCenterAtTime(parentTrack, video.currentTime || 0)
+      if (currentPos) {
+        const deltaX = currentPos.x - ann.attachOriginPos.x
+        const deltaY = currentPos.y - ann.attachOriginPos.y
+        targetCtx.translate(deltaX, deltaY)
+      }
+    }
+  }
+
+  targetCtx.strokeStyle = ann.color; targetCtx.fillStyle = ann.color
   targetCtx.lineWidth = ann.width; targetCtx.lineCap = 'round'; targetCtx.lineJoin = 'round'
   targetCtx.setLineDash(ann.tool === 'dashed' ? [ann.width*4, ann.width*2.5] : [])
   switch (ann.tool) {
