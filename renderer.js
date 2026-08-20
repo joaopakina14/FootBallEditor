@@ -423,18 +423,20 @@ async function doCut() {
       const cx = rw / 2, cy = rh / 2
       const rx = 45, ry = 20
 
+      const spotColor = ann.color || '#ffffff'
+
       sCtx.save()
       sCtx.beginPath()
       sCtx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2)
-      sCtx.strokeStyle = ann.color
-      sCtx.lineWidth = Math.max(4, ann.width)
-      sCtx.shadowColor = ann.color
+      sCtx.strokeStyle = spotColor
+      sCtx.lineWidth = Math.max(4, ann.width || 2)
+      sCtx.shadowColor = spotColor
       sCtx.shadowBlur = 14
       sCtx.stroke()
 
       const grad = sCtx.createRadialGradient(cx, cy, 2, cx, cy, rx)
-      grad.addColorStop(0, ann.color + '77')
-      grad.addColorStop(1, ann.color + '00')
+      grad.addColorStop(0, hexToRgba(spotColor, 0.45))
+      grad.addColorStop(1, hexToRgba(spotColor, 0.0))
       sCtx.fillStyle = grad
       sCtx.fill()
       sCtx.restore()
@@ -885,15 +887,29 @@ function renderAnnToCtx(targetCtx, ann) {
   targetCtx.restore()
 }
 
+// Helper: Convert hex color to rgba string
+function hexToRgba(hex, alpha = 0.4) {
+  if (!hex) return `rgba(255, 255, 255, ${alpha})`
+  let c = hex.replace('#', '')
+  if (c.length === 3) c = c.split('').map(x => x + x).join('')
+  const num = parseInt(c, 16) || 0xffffff
+  const r = (num >> 16) & 255
+  const g = (num >> 8) & 255
+  const b = num & 255
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`
+}
+
 // ── Draw animated player tracking spotlight ────────────────────────
 function drawTrackSpotlight(c, ann) {
   const vRect = getVideoVisualRect()
   if (!vRect) return
 
+  const trackColor = ann.color || '#ffffff'
+
   // If currently drawing the bounding box rectangle
   if (!ann.trajectory) {
     c.setLineDash([4, 4])
-    c.strokeStyle = '#4f8ef7'
+    c.strokeStyle = trackColor
     const x = Math.min(ann.x1, ann.x2), y = Math.min(ann.y1, ann.y2)
     const w = Math.abs(ann.x2 - ann.x1), h = Math.abs(ann.y2 - ann.y1)
     c.strokeRect(x, y, w, h)
@@ -908,14 +924,16 @@ function drawTrackSpotlight(c, ann) {
   // Find nearest point in trajectory
   let point = ann.trajectory[0]
   for (let i = 0; i < ann.trajectory.length; i++) {
-    if (ann.trajectory[i].time <= relTime) {
-      point = ann.trajectory[i]
-    } else {
-      break
-    }
+    if (ann.trajectory[i].time <= relTime) point = ann.trajectory[i]
+    else break
   }
 
   if (!point) return
+
+  // Off-Screen Check: If player exited camera bounds (near edges), hide
+  if (point.x <= 0.015 || point.x >= 0.985 || point.y <= 0.015 || point.y >= 0.985) {
+    return
+  }
 
   // Convert normalized video coords back to target context pixels
   const px = (point.x * vRect.displayWidth) + vRect.offsetX
@@ -924,20 +942,20 @@ function drawTrackSpotlight(c, ann) {
   const rx = Math.max(16, pw * 0.8)
   const ry = rx * 0.45
 
-  // Draw glowing ellipse spotlight at player feet
+  // Draw glowing ellipse spotlight at player feet with chosen color
   c.save()
   c.beginPath()
   c.ellipse(px, py, rx, ry, 0, 0, Math.PI * 2)
-  c.strokeStyle = ann.color
-  c.lineWidth = Math.max(3, ann.width)
-  c.shadowColor = ann.color
+  c.strokeStyle = trackColor
+  c.lineWidth = Math.max(3, ann.width || 2)
+  c.shadowColor = trackColor
   c.shadowBlur = 12
   c.stroke()
 
-  // Inner fill gradient
+  // Inner fill gradient with custom color + same smooth opacity
   const grad = c.createRadialGradient(px, py, 2, px, py, rx)
-  grad.addColorStop(0, ann.color + '66')
-  grad.addColorStop(1, ann.color + '00')
+  grad.addColorStop(0, hexToRgba(trackColor, 0.42))
+  grad.addColorStop(1, hexToRgba(trackColor, 0.0))
   c.fillStyle = grad
   c.fill()
   c.restore()
