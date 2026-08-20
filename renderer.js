@@ -314,6 +314,41 @@ function resetClipUI() {
 
 btnCut.addEventListener('click', doCut)
 
+// Helper to get exact visible video rect inside the container (accounting for letterbox/pillarbox)
+function getVideoVisualRect() {
+  if (!video.videoWidth || !video.videoHeight) return null
+  const rect = video.getBoundingClientRect()
+  const videoAspect = video.videoWidth / video.videoHeight
+  const containerAspect = rect.width / rect.height
+
+  let displayWidth, displayHeight, offsetX, offsetY
+
+  if (containerAspect > videoAspect) {
+    // Pillarbox (black bars on left and right)
+    displayHeight = rect.height
+    displayWidth = rect.height * videoAspect
+    offsetX = (rect.width - displayWidth) / 2
+    offsetY = 0
+  } else {
+    // Letterbox (black bars on top and bottom)
+    displayWidth = rect.width
+    displayHeight = rect.width / videoAspect
+    offsetX = 0
+    offsetY = (rect.height - displayHeight) / 2
+  }
+
+  return {
+    containerWidth: rect.width,
+    containerHeight: rect.height,
+    videoWidth: video.videoWidth,
+    videoHeight: video.videoHeight,
+    displayWidth,
+    displayHeight,
+    offsetX,
+    offsetY
+  }
+}
+
 async function doCut() {
   if (!clip.inputPath || clip.inTime === null || clip.outTime === null) return
 
@@ -336,22 +371,26 @@ async function doCut() {
     return ann.timestamp <= endTime && annEnd >= startTime
   })
 
-  // ★ Generate PNG overlays for each annotation at video resolution
+  // ★ Generate PNG overlays for each annotation scaled & offset to exact native video coordinates
   const overlayImages = []
-  if (targetAnns.length > 0 && video.videoWidth && video.videoHeight) {
+  const vRect = getVideoVisualRect()
+
+  if (targetAnns.length > 0 && vRect) {
     const offscreen = document.createElement('canvas')
-    offscreen.width = video.videoWidth
-    offscreen.height = video.videoHeight
+    offscreen.width = vRect.videoWidth
+    offscreen.height = vRect.videoHeight
     const offCtx = offscreen.getContext('2d')
 
-    const screenRect = canvas.getBoundingClientRect()
-    const scaleX = video.videoWidth / screenRect.width
-    const scaleY = video.videoHeight / screenRect.height
+    const scaleX = vRect.videoWidth / vRect.displayWidth
+    const scaleY = vRect.videoHeight / vRect.displayHeight
 
     targetAnns.forEach(ann => {
       offCtx.clearRect(0, 0, offscreen.width, offscreen.height)
       offCtx.save()
+      
+      // Scale and translate out the letterbox/pillarbox offset
       offCtx.scale(scaleX, scaleY)
+      offCtx.translate(-vRect.offsetX, -vRect.offsetY)
       
       // Render single annotation to offscreen canvas
       renderAnnToCtx(offCtx, ann)
