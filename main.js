@@ -1,5 +1,7 @@
-const { app, BrowserWindow, ipcMain, dialog } = require('electron')
+const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron')
 const path = require('path')
+const ffmpegStatic = require('ffmpeg-static')
+const ffmpeg = require('fluent-ffmpeg')
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -13,14 +15,14 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,
-      webSecurity: false // allows loading local file:// video URLs
+      webSecurity: false
     },
     icon: path.join(__dirname, 'assets', 'icon.png')
   })
 
   win.loadFile('index.html')
 
-  // Expose window controls to renderer
+  // Window controls
   ipcMain.on('window-minimize', () => win.minimize())
   ipcMain.on('window-maximize', () => {
     if (win.isMaximized()) win.unmaximize()
@@ -40,10 +42,30 @@ function createWindow() {
         { name: 'Todos os ficheiros', extensions: ['*'] }
       ]
     })
-    if (!result.canceled && result.filePaths.length > 0) {
-      return result.filePaths[0]
-    }
+    if (!result.canceled && result.filePaths.length > 0) return result.filePaths[0]
     return null
+  })
+
+  // ── Cut video with FFmpeg (-c copy, fast) ──────────────────
+  ipcMain.handle('cut-video', async (event, { inputPath, startTime, duration, outputPath }) => {
+    return new Promise((resolve) => {
+      ffmpeg(inputPath)
+        .setFfmpegPath(ffmpegStatic)
+        .setStartTime(startTime)
+        .setDuration(duration)
+        .outputOptions(['-c copy', '-avoid_negative_ts make_zero'])
+        .output(outputPath)
+        .on('start', cmd => console.log('FFmpeg started:', cmd))
+        .on('end', () => resolve({ success: true, outputPath }))
+        .on('error', err => resolve({ success: false, error: err.message }))
+        .run()
+    })
+  })
+
+  // Open folder in Explorer and highlight the file
+  ipcMain.handle('show-in-folder', (event, filePath) => {
+    shell.showItemInFolder(filePath)
+    return true
   })
 }
 

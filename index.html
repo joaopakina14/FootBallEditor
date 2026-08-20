@@ -10,7 +10,6 @@
 </head>
 <body>
 
-  <!-- Custom title bar -->
   <div class="titlebar" id="titlebar">
     <div class="titlebar-drag">
       <span class="app-logo">&#9917;</span>
@@ -23,7 +22,6 @@
     </div>
   </div>
 
-  <!-- Main layout -->
   <div class="app">
 
     <!-- Empty state -->
@@ -35,7 +33,7 @@
       <p class="formats">MP4 &#183; MKV &#183; AVI &#183; MOV &#183; WMV &#183; WebM e mais</p>
     </div>
 
-    <!-- Video player -->
+    <!-- Player -->
     <div class="player-wrap" id="playerWrap" style="display:none">
 
       <video id="video" tabindex="-1"></video>
@@ -43,15 +41,17 @@
       <!-- Drawing canvas -->
       <canvas id="drawCanvas"></canvas>
 
-      <!-- Click overlay (play/pause) -->
+      <!-- Click overlay -->
       <div class="video-overlay" id="videoOverlay"></div>
 
       <!-- Play/pause flash -->
       <div class="play-flash" id="playFlash">&#9654;</div>
 
-      <!-- ═══ DRAWING TOOLBAR ═══ -->
-      <div class="draw-panel" id="drawPanel">
+      <!-- Toast notification -->
+      <div class="toast" id="toast"></div>
 
+      <!-- Drawing toolbar -->
+      <div class="draw-panel" id="drawPanel">
         <div class="dp-label">Ferramentas</div>
         <div class="dp-tools-grid">
           <button class="dp-tool active" data-tool="pencil" title="Lapis">&#9998;</button>
@@ -61,56 +61,57 @@
           <button class="dp-tool" data-tool="circle" title="Circulo">&#9711;</button>
           <button class="dp-tool" data-tool="rect"   title="Retangulo">&#9645;</button>
         </div>
-
         <div class="dp-sep"></div>
         <div class="dp-label">Cor</div>
         <div class="dp-colors">
-          <div class="dp-color active" data-color="#ffffff" style="background:#ffffff" title="Branco"></div>
-          <div class="dp-color"        data-color="#ffee33" style="background:#ffee33" title="Amarelo"></div>
-          <div class="dp-color"        data-color="#ff4444" style="background:#ff4444" title="Vermelho"></div>
-          <div class="dp-color"        data-color="#44ff88" style="background:#44ff88" title="Verde"></div>
-          <div class="dp-color"        data-color="#4488ff" style="background:#4488ff" title="Azul"></div>
-          <div class="dp-color"        data-color="#ff8844" style="background:#ff8844" title="Laranja"></div>
-          <div class="dp-color"        data-color="#dd44ff" style="background:#dd44ff" title="Roxo"></div>
-          <div class="dp-color"        data-color="#111111" style="background:#111111;border-color:#555" title="Preto"></div>
+          <div class="dp-color active" data-color="#ffffff" style="background:#ffffff"></div>
+          <div class="dp-color"        data-color="#ffee33" style="background:#ffee33"></div>
+          <div class="dp-color"        data-color="#ff4444" style="background:#ff4444"></div>
+          <div class="dp-color"        data-color="#44ff88" style="background:#44ff88"></div>
+          <div class="dp-color"        data-color="#4488ff" style="background:#4488ff"></div>
+          <div class="dp-color"        data-color="#ff8844" style="background:#ff8844"></div>
+          <div class="dp-color"        data-color="#dd44ff" style="background:#dd44ff"></div>
+          <div class="dp-color"        data-color="#111111" style="background:#111111;border-color:#555"></div>
         </div>
-
         <div class="dp-sep"></div>
         <div class="dp-label">Espessura</div>
         <div class="dp-widths">
-          <button class="dp-width active" data-width="2" title="Fino"><span class="wline" style="height:2px"></span></button>
-          <button class="dp-width" data-width="4" title="Medio"><span class="wline" style="height:4px"></span></button>
-          <button class="dp-width" data-width="8" title="Grosso"><span class="wline" style="height:8px"></span></button>
+          <button class="dp-width active" data-width="2"><span class="wline" style="height:2px"></span></button>
+          <button class="dp-width" data-width="4"><span class="wline" style="height:4px"></span></button>
+          <button class="dp-width" data-width="8"><span class="wline" style="height:8px"></span></button>
         </div>
-
         <div class="dp-sep"></div>
         <div class="dp-label">Dura&#231;&#227;o</div>
         <div class="dp-durations">
-          <button class="dp-dur" data-dur="2" title="Visivel por 2 segundos">2s</button>
-          <button class="dp-dur active" data-dur="4" title="Visivel por 4 segundos">4s</button>
-          <button class="dp-dur" data-dur="8" title="Visivel por 8 segundos">8s</button>
-          <button class="dp-dur" data-dur="-1" title="Sempre visivel">&#8734;</button>
+          <button class="dp-dur" data-dur="2">2s</button>
+          <button class="dp-dur active" data-dur="4">4s</button>
+          <button class="dp-dur" data-dur="8">8s</button>
+          <button class="dp-dur" data-dur="-1">&#8734;</button>
         </div>
-
         <div class="dp-sep"></div>
         <div class="dp-actions">
-          <button class="dp-action" id="btnUndo" title="Desfazer (Ctrl+Z)">&#8617; Desfazer</button>
-          <button class="dp-action danger" id="btnClearAll" title="Limpar tudo">&#128465; Limpar</button>
+          <button class="dp-action" id="btnUndo">&#8617; Desfazer</button>
+          <button class="dp-action danger" id="btnClearAll">&#128465; Limpar</button>
         </div>
-
       </div>
-      <!-- ══════════════════════ -->
 
       <!-- Controls bar -->
       <div class="controls" id="controls">
+        <!-- Progress bar -->
         <div class="progress-wrap">
           <span class="time-current" id="timeCurrent">0:00</span>
           <div class="progress-bar" id="progressBar">
-            <div class="progress-fill" id="progressFill"></div>
+            <!-- Clip selection zone -->
+            <div class="clip-zone" id="clipZone"></div>
+            <div class="clip-marker in"  id="clipInMarker"></div>
+            <div class="clip-marker out" id="clipOutMarker"></div>
+            <div class="progress-fill"  id="progressFill"></div>
             <div class="progress-thumb" id="progressThumb"></div>
           </div>
           <span class="time-total" id="timeTotal">0:00</span>
         </div>
+
+        <!-- Buttons row -->
         <div class="btn-row">
           <div class="btn-left">
             <button class="ctrl-btn" id="btnOpen"      title="Abrir ficheiro">&#128194;</button>
@@ -126,6 +127,14 @@
           </div>
           <div class="btn-right">
             <button class="ctrl-btn" id="btnSpeed"      title="Velocidade">1x</button>
+
+            <!-- Clip controls -->
+            <div class="clip-sep"></div>
+            <button class="ctrl-btn clip-btn" id="btnClipIn"  title="Marcar inicio do corte (I)">&#9646;I</button>
+            <button class="ctrl-btn clip-btn" id="btnClipOut" title="Marcar fim do corte (O)">O&#9646;</button>
+            <button class="ctrl-btn cut-btn"  id="btnCut"     title="Cortar e guardar (X)" disabled>&#9986;</button>
+            <div class="clip-sep"></div>
+
             <button class="ctrl-btn" id="btnEditMode"   title="Modo de desenho (E)">&#9998;</button>
             <button class="ctrl-btn" id="btnFullscreen" title="Ecra inteiro">&#9974;</button>
           </div>
