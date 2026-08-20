@@ -694,50 +694,42 @@ canvas.addEventListener('mouseup', async e => {
     } else {
       ann.timestamp = video.currentTime || 0; ann.duration = ds.duration
 
-      // ★ Check Dual Attachment (Line/Arrow/Circle/Rect connecting TWO tracked players)
-      if (ann.tool !== 'pencil' && ann.x1 !== undefined && ann.x2 !== undefined) {
-        const attachStart = findTouchingTrack(ann.x1, ann.y1, ann.timestamp)
-        const attachEnd   = findTouchingTrack(ann.x2, ann.y2, ann.timestamp)
+      // ★ Check Dual Attachment for ANY tool (Lines, Arrows, Circles, Rects & Freehand Pencil Curves)
+      const pStart = ann.tool === 'pencil' ? ann.points[0] : { x: ann.x1, y: ann.y1 }
+      const pEnd   = ann.tool === 'pencil' ? ann.points[ann.points.length - 1] : { x: ann.x2, y: ann.y2 }
 
-        if (attachStart && attachEnd && attachStart.trackId !== attachEnd.trackId) {
-          ann.attachedTrackStartId = attachStart.trackId
-          ann.attachedTrackEndId   = attachEnd.trackId
-          ann.startOffset = { dx: ann.x1 - attachStart.originPos.x, dy: ann.y1 - attachStart.originPos.y }
-          ann.endOffset   = { dx: ann.x2 - attachEnd.originPos.x,   dy: ann.y2 - attachEnd.originPos.y }
+      const attachStart = findTouchingTrack(pStart.x, pStart.y, ann.timestamp)
+      const attachEnd   = (pEnd && (pEnd.x !== pStart.x || pEnd.y !== pStart.y)) ? findTouchingTrack(pEnd.x, pEnd.y, ann.timestamp) : null
 
-          // ★ Sync duration & timestamp with the longest parent tracker
-          const t1 = ds.annotations.find(a => a.id === attachStart.trackId)
-          const t2 = ds.annotations.find(a => a.id === attachEnd.trackId)
-          if (t1 && t2) {
-            ann.timestamp = Math.min(t1.timestamp, t2.timestamp)
-            ann.duration  = Math.max(t1.duration, t2.duration)
-          }
+      if (attachStart && attachEnd && attachStart.trackId !== attachEnd.trackId) {
+        ann.attachedTrackStartId = attachStart.trackId
+        ann.attachedTrackEndId   = attachEnd.trackId
+        ann.attachStartOriginPos = attachStart.originPos
+        ann.attachEndOriginPos   = attachEnd.originPos
+        ann.startOffset = { dx: pStart.x - attachStart.originPos.x, dy: pStart.y - attachStart.originPos.y }
+        ann.endOffset   = { dx: pEnd.x - attachEnd.originPos.x,     dy: pEnd.y - attachEnd.originPos.y }
 
-          showToast('\uD83D\uDD17 Elemento el\u00E1stico ligado aos 2 jogadores!', 2800)
-        } else if (attachStart) {
-          ann.attachedTrackId = attachStart.trackId
-          ann.attachOriginPos = attachStart.originPos
-          const t1 = ds.annotations.find(a => a.id === attachStart.trackId)
-          if (t1) { ann.timestamp = t1.timestamp; ann.duration = t1.duration }
-          showToast('\uD83D\uDE97 Anota\u00E7\u00E3o presa ao jogador! Vai de boleia!', 2500)
-        } else if (attachEnd) {
-          ann.attachedTrackId = attachEnd.trackId
-          ann.attachOriginPos = attachEnd.originPos
-          const t2 = ds.annotations.find(a => a.id === attachEnd.trackId)
-          if (t2) { ann.timestamp = t2.timestamp; ann.duration = t2.duration }
-          showToast('\uD83D\uDE97 Anota\u00E7\u00E3o presa ao jogador! Vai de boleia!', 2500)
+        // ★ Sync duration & timestamp with parent trackers
+        const t1 = ds.annotations.find(a => a.id === attachStart.trackId)
+        const t2 = ds.annotations.find(a => a.id === attachEnd.trackId)
+        if (t1 && t2) {
+          ann.timestamp = Math.min(t1.timestamp, t2.timestamp)
+          ann.duration  = Math.max(t1.duration, t2.duration)
         }
-      } else {
-        // Pencil check
-        const checkPt = ann.tool === 'pencil' ? ann.points[0] : { x: ann.x1, y: ann.y1 }
-        const attachInfo = findTouchingTrack(checkPt.x, checkPt.y, ann.timestamp)
-        if (attachInfo) {
-          ann.attachedTrackId = attachInfo.trackId
-          ann.attachOriginPos = attachInfo.originPos
-          const t1 = ds.annotations.find(a => a.id === attachInfo.trackId)
-          if (t1) { ann.timestamp = t1.timestamp; ann.duration = t1.duration }
-          showToast('\uD83D\uDE97 Anota\u00E7\u00E3o presa ao jogador! Vai de boleia!', 2500)
-        }
+
+        showToast('\uD83D\uDD17 Linha curva el\u00E1stica ligada aos 2 jogadores!', 2800)
+      } else if (attachStart) {
+        ann.attachedTrackId = attachStart.trackId
+        ann.attachOriginPos = attachStart.originPos
+        const t1 = ds.annotations.find(a => a.id === attachStart.trackId)
+        if (t1) { ann.timestamp = t1.timestamp; ann.duration = t1.duration }
+        showToast('\uD83D\uDE97 Anota\u00E7\u00E3o presa ao jogador! Vai de boleia!', 2500)
+      } else if (attachEnd) {
+        ann.attachedTrackId = attachEnd.trackId
+        ann.attachOriginPos = attachEnd.originPos
+        const t2 = ds.annotations.find(a => a.id === attachEnd.trackId)
+        if (t2) { ann.timestamp = t2.timestamp; ann.duration = t2.duration }
+        showToast('\uD83D\uDE97 Anota\u00E7\u00E3o presa ao jogador! Vai de boleia!', 2500)
       }
 
       ds.annotations.push(ann); updateTimelineMarkers(); updateAnnotationBadge()
@@ -775,8 +767,8 @@ function renderAnn(ann) {
 function renderAnnToCtx(targetCtx, ann) {
   targetCtx.save()
 
-  // ★ Case 1: Dual attachment (Line/Arrow stretching between TWO tracked players)
-  if (ann.attachedTrackStartId && ann.attachedTrackEndId && ann.startOffset && ann.endOffset) {
+  // ★ Case 1: Dual attachment (Line/Arrow/Circle/Rect/Pencil stretching between TWO tracked players)
+  if (ann.attachedTrackStartId && ann.attachedTrackEndId) {
     const trackStart = ds.annotations.find(a => a.id === ann.attachedTrackStartId)
     const trackEnd   = ds.annotations.find(a => a.id === ann.attachedTrackEndId)
 
@@ -785,26 +777,49 @@ function renderAnnToCtx(targetCtx, ann) {
       const posEnd   = getTrackCenterAtTime(trackEnd, video.currentTime || 0)
 
       if (posStart && posEnd) {
-        // Construct dynamic copy of annotation with updated endpoints
-        const dynAnn = {
-          ...ann,
-          x1: posStart.x + ann.startOffset.dx,
-          y1: posStart.y + ann.startOffset.dy,
-          x2: posEnd.x + ann.endOffset.dx,
-          y2: posEnd.y + ann.endOffset.dy
-        }
+        if (ann.tool === 'pencil' && ann.points && ann.points.length > 1 && ann.attachStartOriginPos && ann.attachEndOriginPos) {
+          // Freehand pencil curve elastic morphing between 2 players
+          const deltaX1 = posStart.x - ann.attachStartOriginPos.x
+          const deltaY1 = posStart.y - ann.attachStartOriginPos.y
+          const deltaX2 = posEnd.x - ann.attachEndOriginPos.x
+          const deltaY2 = posEnd.y - ann.attachEndOriginPos.y
 
-        targetCtx.strokeStyle = dynAnn.color; targetCtx.fillStyle = dynAnn.color
-        targetCtx.lineWidth = dynAnn.width; targetCtx.lineCap = 'round'; targetCtx.lineJoin = 'round'
-        targetCtx.setLineDash(dynAnn.tool === 'dashed' ? [dynAnn.width*4, dynAnn.width*2.5] : [])
-        switch (dynAnn.tool) {
-          case 'line': case 'dashed': drawLineCtx(targetCtx, dynAnn); break
-          case 'arrow':  drawArrowCtx(targetCtx, dynAnn);  break
-          case 'circle': drawElasticCircleCtx(targetCtx, dynAnn); break
-          case 'rect':   drawElasticRectCtx(targetCtx, dynAnn);   break
+          const N = ann.points.length
+          const dynPoints = ann.points.map((pt, idx) => {
+            const w = idx / (N - 1)
+            const dx = (1 - w) * deltaX1 + w * deltaX2
+            const dy = (1 - w) * deltaY1 + w * deltaY2
+            return { x: pt.x + dx, y: pt.y + dy }
+          })
+
+          const dynAnn = { ...ann, points: dynPoints }
+          targetCtx.strokeStyle = dynAnn.color; targetCtx.fillStyle = dynAnn.color
+          targetCtx.lineWidth = dynAnn.width; targetCtx.lineCap = 'round'; targetCtx.lineJoin = 'round'
+          drawPencilCtx(targetCtx, dynAnn)
+          targetCtx.restore()
+          return
+        } else if (ann.startOffset && ann.endOffset) {
+          // Straight lines, arrows, circles, rects
+          const dynAnn = {
+            ...ann,
+            x1: posStart.x + ann.startOffset.dx,
+            y1: posStart.y + ann.startOffset.dy,
+            x2: posEnd.x + ann.endOffset.dx,
+            y2: posEnd.y + ann.endOffset.dy
+          }
+
+          targetCtx.strokeStyle = dynAnn.color; targetCtx.fillStyle = dynAnn.color
+          targetCtx.lineWidth = dynAnn.width; targetCtx.lineCap = 'round'; targetCtx.lineJoin = 'round'
+          targetCtx.setLineDash(dynAnn.tool === 'dashed' ? [dynAnn.width*4, dynAnn.width*2.5] : [])
+          switch (dynAnn.tool) {
+            case 'line': case 'dashed': drawLineCtx(targetCtx, dynAnn); break
+            case 'arrow':  drawArrowCtx(targetCtx, dynAnn);  break
+            case 'circle': drawElasticCircleCtx(targetCtx, dynAnn); break
+            case 'rect':   drawElasticRectCtx(targetCtx, dynAnn);   break
+          }
+          targetCtx.restore()
+          return
         }
-        targetCtx.restore()
-        return
       }
     }
   }
