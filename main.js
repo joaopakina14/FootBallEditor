@@ -69,11 +69,16 @@ function createWindow() {
     return true
   })
 
-  // ── Save annotations JSON alongside the video ──────────────
+  // ── Save annotations internally (in app userData dir) ────────────────
   ipcMain.handle('save-annotations', (event, { videoPath, annotations }) => {
     try {
-      const annPath = videoPath + '.ann.json'
-      fs.writeFileSync(annPath, JSON.stringify({ version: 1, annotations }, null, 2), 'utf8')
+      const storageDir = path.join(app.getPath('userData'), 'annotations')
+      if (!fs.existsSync(storageDir)) fs.mkdirSync(storageDir, { recursive: true })
+      
+      const fileKey = Buffer.from(videoPath).toString('hex') + '.json'
+      const annPath = path.join(storageDir, fileKey)
+      
+      fs.writeFileSync(annPath, JSON.stringify({ videoPath, version: 1, annotations }, null, 2), 'utf8')
       return { success: true }
     } catch (err) {
       console.error('save-annotations error:', err)
@@ -81,10 +86,13 @@ function createWindow() {
     }
   })
 
-  // ── Load annotations JSON for a video ──────────────────────
+  // ── Load annotations internally ─────────────────────────────────────
   ipcMain.handle('load-annotations', (event, videoPath) => {
     try {
-      const annPath = videoPath + '.ann.json'
+      const storageDir = path.join(app.getPath('userData'), 'annotations')
+      const fileKey = Buffer.from(videoPath).toString('hex') + '.json'
+      const annPath = path.join(storageDir, fileKey)
+      
       if (!fs.existsSync(annPath)) return { success: false, annotations: [] }
       const data = JSON.parse(fs.readFileSync(annPath, 'utf8'))
       return { success: true, annotations: data.annotations || [] }

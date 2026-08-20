@@ -329,10 +329,21 @@ async function doCut() {
   const base     = path.basename(clip.inputPath, ext)
   const outputPath = path.join(dir, `${base}_clip_${formatTimeFile(startTime)}-${formatTimeFile(endTime)}${ext}`)
 
-  // ★ Filter annotations within [startTime, endTime] and adjust timestamps
+  // ★ Filter annotations overlapping with [startTime, endTime] and adjust timestamps
   const clipAnnotations = ds.annotations
-    .filter(ann => ann.timestamp >= startTime && ann.timestamp <= endTime)
-    .map(ann => ({ ...ann, timestamp: +(ann.timestamp - startTime).toFixed(3) }))
+    .filter(ann => {
+      if (ann.duration === -1) return true // Always visible annotations stay
+      const annEnd = ann.timestamp + ann.duration
+      // Checks if annotation overlaps with [startTime, endTime]
+      return ann.timestamp <= endTime && annEnd >= startTime
+    })
+    .map(ann => {
+      const newTimestamp = Math.max(0, ann.timestamp - startTime)
+      return {
+        ...ann,
+        timestamp: +newTimestamp.toFixed(3)
+      }
+    })
 
   btnCut.disabled = true; btnCut.classList.remove('ready')
   showToast('\u2702\uFE0F A cortar...', 0)
