@@ -31,99 +31,51 @@ def smooth_trajectory(trajectory, window_size=5):
 
     return trajectory
 
-def create_best_tracker():
+def extract_kit_color_signature(frame, bx, by, bw, bh):
     """
-    Instancia o melhor rastreador disponivel no OpenCV instalado.
+    Extrai a assinatura de cor dominante do equipamento do jogador (ignorando o verde do relvado).
     """
-    # 1. CSRT (melhor precisao)
-    if hasattr(cv2, 'TrackerCSRT_create'):
-        return cv2.TrackerCSRT_create()
-    if hasattr(cv2, 'legacy') and hasattr(cv2.legacy, 'TrackerCSRT_create'):
-        return cv2.legacy.TrackerCSRT_create()
+    roi = frame[by:by+bh, bx:bx+bw]
+    if roi.size == 0:
+        return None
 
-    # 2. MIL (nativo no OpenCV 5.0)
-    if hasattr(cv2, 'TrackerMIL_create'):
-        return cv2.TrackerMIL_create()
-    if hasattr(cv2, 'legacy') and hasattr(cv2.legacy, 'TrackerMIL_create'):
-        return cv2.legacy.TrackerMIL_create()
+    hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
+    # Filter green grass out
+    lower_green = np.array([30, 40, 40])
+    upper_green = np.array([85, 255, 255])
+    grass_mask = cv2.inRange(hsv, lower_green, upper_green)
+    player_mask = cv2.bitwise_not(grass_mask)
 
-    # 3. KCF
-    if hasattr(cv2, 'TrackerKCF_create'):
-        return cv2.TrackerKCF_create()
-    if hasattr(cv2, 'legacy') and hasattr(cv2.legacy, 'TrackerKCF_create'):
-        return cv2.legacy.TrackerKCF_create()
+    player_hsv = hsv[player_mask > 0]
+    if len(player_hsv) < 10:
+        return None
 
-    # 4. Nano
-    if hasattr(cv2, 'TrackerNano_create'):
-        return cv2.TrackerNano_create()
+    # Calculate Hue histogram for kit color identity
+    hist = cv2.calcHist([player_hsv], [0], None, [180], [0, 180])
+    cv2.normalize(hist, hist, 0, 1, cv2.NORM_MINMAX)
+    return hist
 
-    return None
-
-def fallback_template_tracking(cap, start_frame, max_frames, init_bbox, frame_w, frame_h, fps):
+def verify_color_match(frame, bx, by, bw, bh, target_hist):
     """
-    Algoritmo de rastreio de suporte por Template Matching + Color Hist,
-    garantindo que NUNCA falha mesmo se o OpenCV nao tiver módulos C++ de tracking.
+    Compara a cor da camisola na nova posicao com a assinatura inicial.
+    Retorna True se for o mesmo jogador, False se for um jogador de outra cor (ex: laranja vs verde).
     """
-    cap.set(cv2.CAP_PROP_POS_FRAMES, start_frame)
-    ret, frame = cap.read()
-    if not ret:
-        return []
+    if target_hist is None:
+        return True
 
-    bx, by, bw, bh = init_bbox
-    template = frame[by:by+bh, bx:bx+bw]
-    if template.size == 0:
-        return []
+    h, w = frame.shape[:2]
+    bx = max(0, min(bx, w - 10))
+    by = max(0, min(by, h - 10))
+    bw = max(10, min(bw, w - bx))
+    bh = max(10, min(bh, h - by))
 
-    trajectory = [{
-        "frame": 0, "time": 0.0,
-        "x": round((bx + bw / 2.0) / frame_w, 4),
-        "y": round((by + bh) / frame_h, 4),
-        "w": round(bw / frame_w, 4),
-        "h": round(bh / frame_h, 4)
-    }]
+    curr_hist = extract_kit_color_signature(frame, bx, by, bw, bh)
+    if curr_hist is None:
+        return True
 
-    last_cx, last_cy = bx + bw / 2.0, by + bh
-    search_margin = int(max(bw, bh) * 1.8)
-
-    frame_count = 0
-    while cap.isOpened() and frame_count < max_frames:
-        ret, frame = cap.read()
-        if not ret or frame is None:
-            break
-
-        frame_count += 1
-        # Search region around last known position
-        sx1 = max(0, int(last_cx - bw / 2.0 - search_margin))
-        sy1 = max(0, int(last_cy - bh - search_margin))
-        sx2 = min(frame_w, int(last_cx + bw / 2.0 + search_margin))
-        sy2 = min(frame_h, int(last_cy + search_margin))
-
-        search_roi = frame[sy1:sy2, sx1:sx2]
-        if search_roi.shape[0] < bh or search_roi.shape[1] < bw:
-            break
-
-        res = cv2.matchTemplate(search_roi, template, cv2.TM_CCOEFF_NORMED)
-        _, max_val, _, max_loc = cv2.minMaxLoc(res)
-
-        if max_val > 0.35:
-            new_bx = sx1 + max_loc[0]
-            new_by = sy1 + max_loc[1]
-            cx = new_bx + bw / 2.0
-            cy = new_by + bh
-            last_cx, last_cy = cx, cy
-
-            trajectory.append({
-                "frame": frame_count,
-                "time": round(frame_count / fps, 3),
-                "x": round(cx / frame_w, 4),
-                "y": round(cy / frame_h, 4),
-                "w": round(bw / frame_w, 4),
-                "h": round(bh / frame_h, 4)
-            })
-        else:
-            break
-
-    return trajectory
+    # Compare color histograms using Correlation metric
+    score = cv2.compareHist(target_hist, curr_hist, cv2.HISTCMP_CORREL)
+    return score > 0.15  # Accept match if color similarity > 15%
 
 def track_player(video_path, start_time_sec, duration_sec, bbox):
     cap = cv2.VideoCapture(video_path)
@@ -143,84 +95,135 @@ def track_player(video_path, start_time_sec, duration_sec, bbox):
         return
 
     cap.set(cv2.CAP_PROP_POS_FRAMES, start_frame)
-    ret, frame = cap.read()
-    if not ret or frame is None:
+    ret, raw_frame = cap.read()
+    if not ret or raw_frame is None:
         print(json.dumps({"error": "Não foi possível ler a imagem do vídeo"}))
         return
 
-    frame_h, frame_w = frame.shape[:2]
+    orig_h, orig_w = raw_frame.shape[:2]
 
-    bx = int(bbox['x'] * frame_w)
-    by = int(bbox['y'] * frame_h)
-    bw = int(bbox['w'] * frame_w)
-    bh = int(bbox['h'] * frame_h)
+    # ⚡ Speed Optimization: Resize work frame to max 640px width for ultra-fast calculation
+    work_w = 640
+    scale = work_w / float(orig_w)
+    work_h = int(orig_h * scale)
+    frame = cv2.resize(raw_frame, (work_w, work_h), interpolation=cv2.INTER_LINEAR)
 
-    bx = max(0, min(bx, frame_w - 10))
-    by = max(0, min(by, frame_h - 10))
-    bw = max(10, min(bw, frame_w - bx))
-    bh = max(10, min(bh, frame_h - by))
+    # Scale initial bbox to work resolution
+    bx = int(bbox['x'] * work_w)
+    by = int(bbox['y'] * work_h)
+    bw = int(bbox['w'] * work_w)
+    bh = int(bbox['h'] * work_h)
+
+    bx = max(0, min(bx, work_w - 10))
+    by = max(0, min(by, work_h - 10))
+    bw = max(10, min(bw, work_w - bx))
+    bh = max(10, min(bh, work_h - by))
 
     init_bbox = (bx, by, bw, bh)
-    tracker = create_best_tracker()
+
+    # 🛡️ Extract kit color signature (Green vs Orange vs White vs Blue)
+    kit_hist = extract_kit_color_signature(frame, bx, by, bw, bh)
+
+    # Create Tracker (CSRT preferred)
+    tracker = None
+    if hasattr(cv2, 'TrackerCSRT_create'):
+        tracker = cv2.TrackerCSRT_create()
+    elif hasattr(cv2, 'legacy') and hasattr(cv2.legacy, 'TrackerCSRT_create'):
+        tracker = cv2.legacy.TrackerCSRT_create()
+
+    if tracker is None and hasattr(cv2, 'TrackerMIL_create'):
+        tracker = cv2.TrackerMIL_create()
+
+    if tracker is None:
+        print(json.dumps({"error": "Nenhum rastreador OpenCV suportado foi encontrado"}))
+        return
+
+    try:
+        tracker.init(frame, init_bbox)
+    except Exception as e:
+        print(json.dumps({"error": f"Falha ao iniciar o rastreador: {str(e)}"}))
+        return
 
     trajectory = []
+    last_cx = bx + bw / 2.0
+    last_cy = by + bh
+    vx, vy = 0.0, 0.0  # Velocity vector for momentum prediction during crossover
+    max_jump_pixels = work_w * 0.07  # Max jump per frame (~7% screen width)
 
-    if tracker is not None:
+    trajectory.append({
+        "frame": 0, "time": 0.0,
+        "x": round(last_cx / work_w, 4),
+        "y": round(last_cy / work_h, 4),
+        "w": round(bw / work_w, 4),
+        "h": round(bh / work_h, 4)
+    })
+
+    frame_count = 0
+    while cap.isOpened() and frame_count < max_frames:
+        ret, raw_frame = cap.read()
+        if not ret or raw_frame is None:
+            break
+
+        frame_count += 1
+        frame = cv2.resize(raw_frame, (work_w, work_h), interpolation=cv2.INTER_NEAREST)
+
         try:
-            tracker.init(frame, init_bbox)
-            last_center_x = bx + bw / 2.0
-            last_center_y = by + bh
-            max_jump_pixels = max(frame_w, frame_h) * 0.08
+            success, box = tracker.update(frame)
+        except Exception:
+            success = False
+
+        if success and box is not None:
+            x, y, w, h = [float(v) for v in box]
+            cx = x + w / 2.0
+            cy = y + h
+
+            dist_moved = np.hypot(cx - last_center_x if 'last_center_x' in locals() else cx - last_cx, 
+                                  cy - last_center_y if 'last_center_y' in locals() else cy - last_cy)
+
+            # 🛡️ Verify if color matches original kit identity (prevents swapping green player with orange player)
+            color_ok = verify_color_match(frame, int(x), int(y), int(w), int(h), kit_hist)
+
+            if dist_moved <= max_jump_pixels and color_ok:
+                # Valid player tracking step
+                new_vx = cx - last_cx
+                new_vy = cy - last_cy
+                vx = 0.6 * vx + 0.4 * new_vx  # Smooth velocity
+                vy = 0.6 * vy + 0.4 * new_vy
+                last_cx = cx
+                last_cy = cy
+            else:
+                # 🛡️ Crossover / Color mismatch detected: Inertia prediction!
+                # Use current velocity vector to continue tracking original player smoothly
+                last_cx += vx
+                last_cy += vy
+                # Re-center tracker box at predicted position
+                pred_bx = int(last_cx - bw / 2.0)
+                pred_by = int(last_cy - bh)
+                try:
+                    tracker.init(frame, (pred_bx, pred_by, int(bw), int(bh)))
+                except Exception:
+                    pass
 
             trajectory.append({
-                "frame": 0, "time": 0.0,
-                "x": round(last_center_x / frame_w, 4),
-                "y": round(last_center_y / frame_h, 4),
-                "w": round(bw / frame_w, 4),
-                "h": round(bh / frame_h, 4)
+                "frame": frame_count,
+                "time": round(frame_count / fps, 3),
+                "x": round(last_cx / work_w, 4),
+                "y": round(last_cy / work_h, 4),
+                "w": round(bw / work_w, 4),
+                "h": round(bh / work_h, 4)
             })
-
-            frame_count = 0
-            while cap.isOpened() and frame_count < max_frames:
-                ret, frame = cap.read()
-                if not ret or frame is None:
-                    break
-
-                frame_count += 1
-                try:
-                    success, box = tracker.update(frame)
-                except Exception:
-                    success = False
-
-                if success and box is not None:
-                    x, y, w, h = [float(v) for v in box]
-                    cx = x + w / 2.0
-                    cy = y + h
-
-                    dist_moved = np.hypot(cx - last_center_x, cy - last_center_y)
-                    if dist_moved > max_jump_pixels:
-                        cx = last_center_x
-                        cy = last_center_y
-                    else:
-                        last_center_x = cx
-                        last_center_y = cy
-
-                    trajectory.append({
-                        "frame": frame_count,
-                        "time": round(frame_count / fps, 3),
-                        "x": round(cx / frame_w, 4),
-                        "y": round(cy / frame_h, 4),
-                        "w": round(w / frame_w, 4),
-                        "h": round(h / frame_h, 4)
-                    })
-                else:
-                    break
-        except Exception as e:
-            trajectory = []
-
-    # If OpenCV C++ tracker is not available or failed, use internal template tracker
-    if len(trajectory) < 2:
-        trajectory = fallback_template_tracking(cap, start_frame, max_frames, init_bbox, frame_w, frame_h, fps)
+        else:
+            # Predict position using momentum for up to 5 lost frames
+            last_cx += vx
+            last_cy += vy
+            trajectory.append({
+                "frame": frame_count,
+                "time": round(frame_count / fps, 3),
+                "x": round(last_cx / work_w, 4),
+                "y": round(last_cy / work_h, 4),
+                "w": round(bw / work_w, 4),
+                "h": round(bh / work_h, 4)
+            })
 
     cap.release()
 
@@ -228,6 +231,7 @@ def track_player(video_path, start_time_sec, duration_sec, bbox):
         print(json.dumps({"error": "Não foi possível rastrear o jogador"}))
         return
 
+    # Apply smoothing filter
     trajectory = smooth_trajectory(trajectory, window_size=5)
 
     print(json.dumps({
