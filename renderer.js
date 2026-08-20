@@ -694,14 +694,35 @@ canvas.addEventListener('mouseup', async e => {
     } else {
       ann.timestamp = video.currentTime || 0; ann.duration = ds.duration
 
-      // ★ Check if this drawing touches an active player tracker ("Vai de boleia")
-      const checkPt = ann.tool === 'pencil' ? ann.points[0] : { x: ann.x1, y: ann.y1 }
-      const attachInfo = findTouchingTrack(checkPt.x, checkPt.y, ann.timestamp)
+      // ★ Check Dual Attachment (Line/Arrow connecting TWO tracked players)
+      if (ann.tool !== 'pencil' && ann.x1 !== undefined && ann.x2 !== undefined) {
+        const attachStart = findTouchingTrack(ann.x1, ann.y1, ann.timestamp)
+        const attachEnd   = findTouchingTrack(ann.x2, ann.y2, ann.timestamp)
 
-      if (attachInfo) {
-        ann.attachedTrackId = attachInfo.trackId
-        ann.attachOriginPos = attachInfo.originPos
-        showToast('\uD83D\uDE97 Anota\u00E7\u00E3o presa ao jogador! Vai de boleia!', 2500)
+        if (attachStart && attachEnd && attachStart.trackId !== attachEnd.trackId) {
+          ann.attachedTrackStartId = attachStart.trackId
+          ann.attachedTrackEndId   = attachEnd.trackId
+          ann.startOffset = { dx: ann.x1 - attachStart.originPos.x, dy: ann.y1 - attachStart.originPos.y }
+          ann.endOffset   = { dx: ann.x2 - attachEnd.originPos.x,   dy: ann.y2 - attachEnd.originPos.y }
+          showToast('\uD83D\uDD17 Linha el\u00E1stica ligada aos 2 jogadores!', 2800)
+        } else if (attachStart) {
+          ann.attachedTrackId = attachStart.trackId
+          ann.attachOriginPos = attachStart.originPos
+          showToast('\uD83D\uDE97 Anota\u00E7\u00E3o presa ao jogador! Vai de boleia!', 2500)
+        } else if (attachEnd) {
+          ann.attachedTrackId = attachEnd.trackId
+          ann.attachOriginPos = attachEnd.originPos
+          showToast('\uD83D\uDE97 Anota\u00E7\u00E3o presa ao jogador! Vai de boleia!', 2500)
+        }
+      } else {
+        // Pencil or single point check
+        const checkPt = ann.tool === 'pencil' ? ann.points[0] : { x: ann.x1, y: ann.y1 }
+        const attachInfo = findTouchingTrack(checkPt.x, checkPt.y, ann.timestamp)
+        if (attachInfo) {
+          ann.attachedTrackId = attachInfo.trackId
+          ann.attachOriginPos = attachInfo.originPos
+          showToast('\uD83D\uDE97 Anota\u00E7\u00E3o presa ao jogador! Vai de boleia!', 2500)
+        }
       }
 
       ds.annotations.push(ann); updateTimelineMarkers(); updateAnnotationBadge()
@@ -739,7 +760,41 @@ function renderAnn(ann) {
 function renderAnnToCtx(targetCtx, ann) {
   targetCtx.save()
 
-  // ★ If this annotation is attached to a player tracker ("Vai de boleia"), translate context dynamically
+  // ★ Case 1: Dual attachment (Line/Arrow stretching between TWO tracked players)
+  if (ann.attachedTrackStartId && ann.attachedTrackEndId && ann.startOffset && ann.endOffset) {
+    const trackStart = ds.annotations.find(a => a.id === ann.attachedTrackStartId)
+    const trackEnd   = ds.annotations.find(a => a.id === ann.attachedTrackEndId)
+
+    if (trackStart && trackEnd) {
+      const posStart = getTrackCenterAtTime(trackStart, video.currentTime || 0)
+      const posEnd   = getTrackCenterAtTime(trackEnd, video.currentTime || 0)
+
+      if (posStart && posEnd) {
+        // Construct dynamic copy of annotation with updated endpoints
+        const dynAnn = {
+          ...ann,
+          x1: posStart.x + ann.startOffset.dx,
+          y1: posStart.y + ann.startOffset.dy,
+          x2: posEnd.x + ann.endOffset.dx,
+          y2: posEnd.y + ann.endOffset.dy
+        }
+
+        targetCtx.strokeStyle = dynAnn.color; targetCtx.fillStyle = dynAnn.color
+        targetCtx.lineWidth = dynAnn.width; targetCtx.lineCap = 'round'; targetCtx.lineJoin = 'round'
+        targetCtx.setLineDash(dynAnn.tool === 'dashed' ? [dynAnn.width*4, dynAnn.width*2.5] : [])
+        switch (dynAnn.tool) {
+          case 'line': case 'dashed': drawLineCtx(targetCtx, dynAnn); break
+          case 'arrow':  drawArrowCtx(targetCtx, dynAnn);  break
+          case 'circle': drawCircleCtx(targetCtx, dynAnn); break
+          case 'rect':   drawRectCtx(targetCtx, dynAnn);   break
+        }
+        targetCtx.restore()
+        return
+      }
+    }
+  }
+
+  // ★ Case 2: Single attachment (whole drawing translates with one player)
   if (ann.attachedTrackId && ann.attachOriginPos) {
     const parentTrack = ds.annotations.find(a => a.id === ann.attachedTrackId)
     if (parentTrack && parentTrack.trajectory) {
