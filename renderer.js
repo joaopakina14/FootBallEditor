@@ -188,7 +188,8 @@ document.addEventListener('mousemove', () => {
 // ── Keyboard shortcuts ────────────────────────────────────
 document.addEventListener('keydown', e => {
   if (e.code === 'KeyE' && !e.ctrlKey) { toggleEditMode(); return }
-  if (e.code === 'KeyZ' && e.ctrlKey)  { undoDraw(); return }
+  if (e.code === 'KeyZ' && e.ctrlKey && !e.shiftKey) { undoDraw(); return }
+  if ((e.code === 'KeyY' && e.ctrlKey) || (e.code === 'KeyZ' && e.ctrlKey && e.shiftKey)) { redoDraw(); return }
   if (e.code === 'KeyI' && !e.ctrlKey) { markIn(); return }
   if (e.code === 'KeyO' && !e.ctrlKey) { markOut(); return }
   if (e.code === 'KeyX' && !e.ctrlKey) { if (!btnCut.disabled) doCut(); return }
@@ -529,8 +530,15 @@ const ctx       = canvas.getContext('2d')
 const drawPanel = document.getElementById('drawPanel')
 
 const ds = {
-  enabled: false, tool: 'pencil', color: '#ffffff', width: 2, duration: 4,
-  annotations: [], current: null, drawing: false
+  enabled:     false,
+  tool:        'pencil',
+  color:       '#ffffff',
+  width:       2,
+  duration:    4,
+  annotations: [],
+  redoStack:   [],
+  current:     null,
+  drawing:     false
 }
 
 function resizeCanvas() {
@@ -580,16 +588,33 @@ document.querySelectorAll('.dp-dur').forEach(btn => {
   btn.addEventListener('click', () => { document.querySelectorAll('.dp-dur').forEach(b => b.classList.remove('active')); btn.classList.add('active'); ds.duration = parseInt(btn.dataset.dur) })
 })
 
-// Undo & Clear
+// Undo & Redo
 function undoDraw() {
   if (!ds.annotations.length) return
-  ds.annotations.pop(); redraw(); updateTimelineMarkers(); updateAnnotationBadge()
-  scheduleAnnotationSave() // ★ persist change
+  const undone = ds.annotations.pop()
+  ds.redoStack.push(undone)
+  redraw(); updateTimelineMarkers(); updateAnnotationBadge()
+  scheduleAnnotationSave()
 }
+
+function redoDraw() {
+  if (!ds.redoStack.length) return
+  const redone = ds.redoStack.pop()
+  ds.annotations.push(redone)
+  redraw(); updateTimelineMarkers(); updateAnnotationBadge()
+  scheduleAnnotationSave()
+}
+
 document.getElementById('btnUndo').addEventListener('click', undoDraw)
+document.getElementById('btnRedo').addEventListener('click', redoDraw)
 document.getElementById('btnClearAll').addEventListener('click', () => {
-  ds.annotations = []; ds.current = null; redraw(); updateTimelineMarkers(); updateAnnotationBadge()
-  scheduleAnnotationSave() // ★ persist change
+  if (ds.annotations.length > 0) {
+    ds.redoStack = [...ds.annotations]
+    ds.annotations = []
+    ds.current = null
+    redraw(); updateTimelineMarkers(); updateAnnotationBadge()
+    scheduleAnnotationSave()
+  }
 })
 
 // Helper: get current center position of a track annotation at time t
