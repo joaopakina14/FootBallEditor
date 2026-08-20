@@ -4,12 +4,11 @@ import cv2
 
 def track_player(video_path, start_time_sec, duration_sec, bbox):
     """
-    Rastreia um jogador usando o algoritmo CSRT do OpenCV.
-    bbox: [x, y, w, h] em coordenadas normalizadas (0.0 a 1.0) ou pixeis nativos do video
+    Rastreia um jogador usando OpenCV.
     """
     cap = cv2.VideoCapture(video_path)
     if not cap.isOpened():
-        print(json.dumps({"error": f"Could not open video: {video_path}"}))
+        print(json.dumps({"error": f"Não foi possível abrir o vídeo: {video_path}"}))
         return
 
     fps = cap.get(cv2.CAP_PROP_FPS)
@@ -21,17 +20,17 @@ def track_player(video_path, start_time_sec, duration_sec, bbox):
     max_frames = int(duration_sec * fps)
 
     if start_frame >= total_frames:
-        print(json.dumps({"error": "Start time exceeds video length"}))
+        print(json.dumps({"error": "Tempo inicial excede a duração do vídeo"}))
         return
 
     cap.set(cv2.CAP_PROP_POS_FRAMES, start_frame)
     ret, frame = cap.read()
     if not ret or frame is None:
-        print(json.dumps({"error": "Failed to read initial frame"}))
+        print(json.dumps({"error": "Não foi possível ler a imagem do vídeo"}))
         return
 
-    frame_h, frame_w = frame.shape[:0]
-    frame_h, frame_w = frame.shape[0], frame.shape[1]
+    # Fix: Get frame dimensions correctly
+    frame_h, frame_w = frame.shape[:2]
 
     # Convert bbox from normalized [0..1] to pixel coords [x, y, w, h]
     bx = int(bbox['x'] * frame_w)
@@ -39,33 +38,54 @@ def track_player(video_path, start_time_sec, duration_sec, bbox):
     bw = int(bbox['w'] * frame_w)
     bh = int(bbox['h'] * frame_h)
 
-    # Ensure valid bounding box
-    bx = max(0, min(bx, frame_w - 5))
-    by = max(0, min(by, frame_h - 5))
-    bw = max(5, min(bw, frame_w - bx))
-    bh = max(5, min(bh, frame_h - by))
+    # Ensure valid bounding box within frame bounds
+    bx = max(0, min(bx, frame_w - 10))
+    by = max(0, min(by, frame_h - 10))
+    bw = max(10, min(bw, frame_w - bx))
+    bh = max(10, min(bh, frame_h - by))
 
     init_bbox = (bx, by, bw, bh)
 
-    # Initialize OpenCV CSRT Tracker (or Legacy Tracker depending on version)
-    try:
-        tracker = cv2.TrackerCSRT_create()
-    except AttributeError:
-        try:
-            tracker = cv2.legacy.TrackerCSRT_create()
-        except AttributeError:
-            # Fallback to KCF if CSRT isn't directly available in current OpenCV build
-            tracker = cv2.TrackerKCF_create()
+    # Create OpenCV Tracker with robust fallbacks
+    tracker = None
 
-    tracker.init(frame, init_bbox)
+    # Try CSRT Tracker
+    if hasattr(cv2, 'TrackerCSRT_create'):
+        tracker = cv2.TrackerCSRT_create()
+    elif hasattr(cv2, 'legacy') and hasattr(cv2.legacy, 'TrackerCSRT_create'):
+        tracker = cv2.legacy.TrackerCSRT_create()
+
+    # Fallback to KCF Tracker
+    if tracker is None:
+        if hasattr(cv2, 'TrackerKCF_create'):
+            tracker = cv2.TrackerKCF_create()
+        elif hasattr(cv2, 'legacy') and hasattr(cv2.legacy, 'TrackerKCF_create'):
+            tracker = cv2.legacy.TrackerKCF_create()
+
+    # Fallback to MIL Tracker
+    if tracker is None:
+        if hasattr(cv2, 'TrackerMIL_create'):
+            tracker = cv2.TrackerMIL_create()
+        elif hasattr(cv2, 'legacy') and hasattr(cv2.legacy, 'TrackerMIL_create'):
+            tracker = cv2.legacy.TrackerMIL_create()
+
+    if tracker is None:
+        print(json.dumps({"error": "Nenhum rastreador OpenCV suportado foi encontrado"}))
+        return
+
+    try:
+        tracker.init(frame, init_bbox)
+    except Exception as e:
+        print(json.dumps({"error": f"Falha ao iniciar o rastreador: {str(e)}"}))
+        return
 
     trajectory = []
-    # Add initial frame position
+    # Add initial frame position (bottom center of bbox = player feet)
     trajectory.append({
         "frame": 0,
         "time": 0.0,
         "x": round((bx + bw / 2.0) / frame_w, 4),
-        "y": round((by + bh) / frame_h, 4), # Feet position at bottom center
+        "y": round((by + bh) / frame_h, 4),
         "w": round(bw / frame_w, 4),
         "h": round(bh / frame_h, 4)
     })
@@ -77,12 +97,15 @@ def track_player(video_path, start_time_sec, duration_sec, bbox):
             break
 
         frame_count += 1
-        success, box = tracker.update(frame)
+        try:
+            success, box = tracker.update(frame)
+        except Exception:
+            success = False
 
-        if success:
+        if success and box is not None:
             x, y, w, h = [float(v) for v in box]
             cx = (x + w / 2.0) / frame_w
-            cy = (y + h) / frame_h # Spotting at feet
+            cy = (y + h) / frame_h  # Feet position
             trajectory.append({
                 "frame": frame_count,
                 "time": round(frame_count / fps, 3),
@@ -92,10 +115,15 @@ def track_player(video_path, start_time_sec, duration_sec, bbox):
                 "h": round(h / frame_h, 4)
             })
         else:
-            # Rastreio perdeu o objeto
+            # Player lost or out of bounds
             break
 
     cap.release()
+
+    if len(trajectory) == 0:
+        print(json.dumps({"error": "Não foi possível detetar o movimento"}))
+        return
+
     print(json.dumps({
         "success": True,
         "fps": fps,
