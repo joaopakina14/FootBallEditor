@@ -48,36 +48,63 @@ function createWindow() {
   })
 
   // ── Cut video with optional burn-in overlays (FFmpeg) ──────────────────
-  ipcMain.handle('cut-video', async (event, { inputPath, startTime, duration, outputPath, overlayImages }) => {
+  ipcMain.handle('cut-video', async (event, { inputPath, startTime, duration, outputPath, overlayImages, trackingOverlays }) => {
     return new Promise((resolve) => {
       let command = ffmpeg(inputPath)
         .setFfmpegPath(ffmpegStatic)
         .setStartTime(startTime)
         .setDuration(duration)
 
-      if (overlayImages && overlayImages.length > 0) {
-        // We have drawings to burn-in onto the video!
-        // Save temp overlay images and construct complex filter
+      const hasStatic = overlayImages && overlayImages.length > 0
+      const hasTracking = trackingOverlays && trackingOverlays.length > 0
+
+      if (hasStatic || hasTracking) {
         const tempDir = path.join(app.getPath('temp'), 'football_editor_overlays')
         if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true })
 
-        let filterInputs = ''
         let filterComplex = ''
         let lastStream = '0:v'
+        let inputIdx = 1
 
-        overlayImages.forEach((ov, index) => {
-          const imgFileName = `overlay_${Date.now()}_${index}.png`
-          const imgPath = path.join(tempDir, imgFileName)
-          const base64Data = ov.dataUrl.replace(/^data:image\/png;base64,/, "")
-          fs.writeFileSync(imgPath, base64Data, 'base64')
+        // 1. Process static overlays (pencil, lines, arrows, etc.)
+        if (hasStatic) {
+          overlayImages.forEach((ov) => {
+            const imgFileName = `overlay_static_${Date.now()}_${inputIdx}.png`
+            const imgPath = path.join(tempDir, imgFileName)
+            const base64Data = ov.dataUrl.replace(/^data:image\/png;base64,/, "")
+            fs.writeFileSync(imgPath, base64Data, 'base64')
 
-          command.input(imgPath)
-          const inputIndex = index + 1
-          const enableCond = `between(t,${ov.startTime.toFixed(2)},${ov.endTime.toFixed(2)})`
-          const nextStream = `v${index}`
-          filterComplex += `[${lastStream}][${inputIndex}:v]overlay=0:0:enable='${enableCond}'[${nextStream}];`
-          lastStream = nextStream
-        })
+            command.input(imgPath)
+            const enableCond = `between(t,${ov.startTime.toFixed(2)},${ov.endTime.toFixed(2)})`
+            const nextStream = `v${inputIdx}`
+            filterComplex += `[${lastStream}][${inputIdx}:v]overlay=0:0:enable='${enableCond}'[${nextStream}];`
+            lastStream = nextStream
+            inputIdx++
+          })
+        }
+
+        // 2. Process animated player tracking overlays
+        if (hasTracking) {
+          trackingOverlays.forEach((track) => {
+            const imgFileName = `overlay_spot_${Date.now()}_${inputIdx}.png`
+            const imgPath = path.join(tempDir, imgFileName)
+            const base64Data = track.spotlightDataUrl.replace(/^data:image\/png;base64,/, "")
+            fs.writeFileSync(imgPath, base64Data, 'base64')
+
+            command.input(imgPath)
+            const currentOverlayInput = inputIdx
+            inputIdx++
+
+            // Apply each frame point of trajectory
+            track.frames.forEach((pt) => {
+              const enableCond = `between(t,${pt.tStart.toFixed(2)},${pt.tEnd.toFixed(2)})`
+              const nextStream = `v${inputIdx}`
+              filterComplex += `[${lastStream}][${currentOverlayInput}:v]overlay=x=${pt.x}:y=${pt.y}:enable='${enableCond}'[${nextStream}];`
+              lastStream = nextStream
+              inputIdx++
+            })
+          })
+        }
 
         // Remove trailing semicolon
         filterComplex = filterComplex.slice(0, -1)

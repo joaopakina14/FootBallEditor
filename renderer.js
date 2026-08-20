@@ -364,18 +364,15 @@ async function doCut() {
   const base     = path.basename(clip.inputPath, ext)
   const outputPath = path.join(dir, `${base}_clip_${formatTimeFile(startTime)}-${formatTimeFile(endTime)}${ext}`)
 
-  // ★ Filter annotations overlapping with [startTime, endTime]
-  const targetAnns = ds.annotations.filter(ann => {
-    if (ann.duration === -1) return true
-    const annEnd = ann.timestamp + ann.duration
-    return ann.timestamp <= endTime && annEnd >= startTime
-  })
+  // ★ Separate static annotations and animated tracking annotations
+  const staticAnns = targetAnns.filter(ann => ann.tool !== 'track')
+  const trackAnns  = targetAnns.filter(ann => ann.tool === 'track' && ann.trajectory && ann.trajectory.length > 0)
 
-  // ★ Generate PNG overlays for each annotation scaled & offset to exact native video coordinates
+  // 1. Generate static PNG overlays
   const overlayImages = []
   const vRect = getVideoVisualRect()
 
-  if (targetAnns.length > 0 && vRect) {
+  if (staticAnns.length > 0 && vRect) {
     const offscreen = document.createElement('canvas')
     offscreen.width = vRect.videoWidth
     offscreen.height = vRect.videoHeight
@@ -384,15 +381,11 @@ async function doCut() {
     const scaleX = vRect.videoWidth / vRect.displayWidth
     const scaleY = vRect.videoHeight / vRect.displayHeight
 
-    targetAnns.forEach(ann => {
+    staticAnns.forEach(ann => {
       offCtx.clearRect(0, 0, offscreen.width, offscreen.height)
       offCtx.save()
-      
-      // Scale and translate out the letterbox/pillarbox offset
       offCtx.scale(scaleX, scaleY)
       offCtx.translate(-vRect.offsetX, -vRect.offsetY)
-      
-      // Render single annotation to offscreen canvas
       renderAnnToCtx(offCtx, ann)
       offCtx.restore()
 
@@ -409,19 +402,85 @@ async function doCut() {
     })
   }
 
+  // 2. Generate animated tracking overlays for FFmpeg
+  const trackingOverlays = []
+  if (trackAnns.length > 0 && vRect) {
+    trackAnns.forEach(ann => {
+      // Create spotlight PNG image (120x60)
+      const spotCanvas = document.createElement('canvas')
+      const rw = 120, rh = 60
+      spotCanvas.width = rw
+      spotCanvas.height = rh
+      const sCtx = spotCanvas.getContext('2d')
+
+      const cx = rw / 2, cy = rh / 2
+      const rx = 45, ry = 20
+
+      sCtx.save()
+      sCtx.beginPath()
+      sCtx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2)
+      sCtx.strokeStyle = ann.color
+      sCtx.lineWidth = Math.max(4, ann.width)
+      sCtx.shadowColor = ann.color
+      sCtx.shadowBlur = 14
+      sCtx.stroke()
+
+      const grad = sCtx.createRadialGradient(cx, cy, 2, cx, cy, rx)
+      grad.addColorStop(0, ann.color + '77')
+      grad.addColorStop(1, ann.color + '00')
+      sCtx.fillStyle = grad
+      sCtx.fill()
+      sCtx.restore()
+
+      const spotlightDataUrl = spotCanvas.toDataURL('image/png')
+      const frames = []
+      const relTrackStart = ann.timestamp - startTime
+
+      for (let i = 0; i < ann.trajectory.length; i++) {
+        const pt = ann.trajectory[i]
+        const tStart = relTrackStart + pt.time
+        if (tStart < 0 || tStart > duration) continue
+
+        const tEnd = (i < ann.trajectory.length - 1)
+          ? Math.min(duration, relTrackStart + ann.trajectory[i + 1].time)
+          : Math.min(duration, tStart + 0.1)
+
+        if (tEnd <= tStart) continue
+
+        const nativePx = Math.round(pt.x * vRect.videoWidth - cx)
+        const nativePy = Math.round(pt.y * vRect.videoHeight - cy)
+
+        frames.push({
+          tStart,
+          tEnd,
+          x: nativePx,
+          y: nativePy
+        })
+      }
+
+      if (frames.length > 0) {
+        trackingOverlays.push({
+          spotlightDataUrl,
+          frames
+        })
+      }
+    })
+  }
+
   btnCut.disabled = true; btnCut.classList.remove('ready')
-  const statusMsg = overlayImages.length > 0 
-    ? `\u2702\uFE0F A processar e gravar ${overlayImages.length} anota\u00E7\u00E3o(oes) no v\u00EDdeo...` 
+  const totalOverlaysCount = overlayImages.length + trackingOverlays.length
+  const statusMsg = totalOverlaysCount > 0 
+    ? `\u2702\uFE0F A processar e gravar ${totalOverlaysCount} elemento(s) no v\u00EDdeo...` 
     : '\u2702\uFE0F A cortar...'
   showToast(statusMsg, 0)
 
   const result = await ipcRenderer.invoke('cut-video', {
-    inputPath: clip.inputPath, startTime, duration, outputPath, overlayImages
+    inputPath: clip.inputPath, startTime, duration, outputPath, overlayImages, trackingOverlays
   })
 
   if (result.success) {
     const filename = path.basename(result.outputPath)
-    const annInfo  = overlayImages.length > 0 ? ` + ${overlayImages.length} anota\u00E7\u00E3o(oes) gravada(s)!` : ''
+    const annInfo  = totalOverlaysCount > 0 ? ` + ${totalOverlaysCount} elemento(s) gravado(s)!` : ''
     showToast(`\u2705 ${filename}${annInfo}`, 6000, result.outputPath)
     resetClipUI()
   } else {
