@@ -31,51 +31,55 @@ def smooth_trajectory(trajectory, window_size=5):
 
     return trajectory
 
-def extract_kit_color_signature(frame, bx, by, bw, bh):
+def get_grass_ratio(hsv_frame):
     """
-    Extrai a assinatura de cor dominante do equipamento do jogador (ignorando o verde do relvado).
+    Calcula a percentagem de relvado verde presente no ecrã.
     """
-    roi = frame[by:by+bh, bx:bx+bw]
-    if roi.size == 0:
+    lower_green = np.array([30, 35, 35])
+    upper_green = np.array([85, 255, 255])
+    grass_mask = cv2.inRange(hsv_frame, lower_green, upper_green)
+    return np.count_nonzero(grass_mask) / float(grass_mask.size)
+
+def extract_kit_color_signature(frame_hsv, bx, by, bw, bh):
+    """
+    Extrai a assinatura de cor dominante do equipamento do jogador.
+    """
+    roi_hsv = frame_hsv[by:by+bh, bx:bx+bw]
+    if roi_hsv.size == 0:
         return None
 
-    hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
-    # Filter green grass out
-    lower_green = np.array([30, 40, 40])
+    lower_green = np.array([30, 35, 35])
     upper_green = np.array([85, 255, 255])
-    grass_mask = cv2.inRange(hsv, lower_green, upper_green)
+    grass_mask = cv2.inRange(roi_hsv, lower_green, upper_green)
     player_mask = cv2.bitwise_not(grass_mask)
 
-    player_hsv = hsv[player_mask > 0]
+    player_hsv = roi_hsv[player_mask > 0]
     if len(player_hsv) < 10:
         return None
 
-    # Calculate Hue histogram for kit color identity
     hist = cv2.calcHist([player_hsv], [0], None, [180], [0, 180])
     cv2.normalize(hist, hist, 0, 1, cv2.NORM_MINMAX)
     return hist
 
-def verify_color_match(frame, bx, by, bw, bh, target_hist):
+def verify_color_match(frame_hsv, bx, by, bw, bh, target_hist):
     """
     Compara a cor da camisola na nova posicao com a assinatura inicial.
-    Retorna True se for o mesmo jogador, False se for um jogador de outra cor (ex: laranja vs verde).
     """
     if target_hist is None:
         return True
 
-    h, w = frame.shape[:2]
+    h, w = frame_hsv.shape[:2]
     bx = max(0, min(bx, w - 10))
     by = max(0, min(by, h - 10))
     bw = max(10, min(bw, w - bx))
     bh = max(10, min(bh, h - by))
 
-    curr_hist = extract_kit_color_signature(frame, bx, by, bw, bh)
+    curr_hist = extract_kit_color_signature(frame_hsv, bx, by, bw, bh)
     if curr_hist is None:
         return True
 
-    # Compare color histograms using Correlation metric
     score = cv2.compareHist(target_hist, curr_hist, cv2.HISTCMP_CORREL)
-    return score > 0.15  # Accept match if color similarity > 15%
+    return score > 0.12
 
 def track_player(video_path, start_time_sec, duration_sec, bbox):
     cap = cv2.VideoCapture(video_path)
@@ -102,11 +106,15 @@ def track_player(video_path, start_time_sec, duration_sec, bbox):
 
     orig_h, orig_w = raw_frame.shape[:2]
 
-    # ⚡ Speed Optimization: Resize work frame to max 640px width for ultra-fast calculation
+    # ⚡ Speed Optimization: Resize work frame to max 640px width
     work_w = 640
     scale = work_w / float(orig_w)
     work_h = int(orig_h * scale)
     frame = cv2.resize(raw_frame, (work_w, work_h), interpolation=cv2.INTER_LINEAR)
+    frame_hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+
+    # Initial pitch green ratio (e.g. 60% green)
+    initial_green_ratio = get_grass_ratio(frame_hsv)
 
     # Scale initial bbox to work resolution
     bx = int(bbox['x'] * work_w)
@@ -121,8 +129,8 @@ def track_player(video_path, start_time_sec, duration_sec, bbox):
 
     init_bbox = (bx, by, bw, bh)
 
-    # 🛡️ Extract kit color signature (Green vs Orange vs White vs Blue)
-    kit_hist = extract_kit_color_signature(frame, bx, by, bw, bh)
+    # Extract kit color signature
+    kit_hist = extract_kit_color_signature(frame_hsv, bx, by, bw, bh)
 
     # Create Tracker (CSRT preferred)
     tracker = None
@@ -147,8 +155,8 @@ def track_player(video_path, start_time_sec, duration_sec, bbox):
     trajectory = []
     last_cx = bx + bw / 2.0
     last_cy = by + bh
-    vx, vy = 0.0, 0.0  # Velocity vector for momentum prediction during crossover
-    max_jump_pixels = work_w * 0.07  # Max jump per frame (~7% screen width)
+    vx, vy = 0.0, 0.0
+    max_jump_pixels = work_w * 0.07
 
     trajectory.append({
         "frame": 0, "time": 0.0,
@@ -158,7 +166,9 @@ def track_player(video_path, start_time_sec, duration_sec, bbox):
         "h": round(bh / work_h, 4)
     })
 
+    color_mismatch_count = 0
     frame_count = 0
+
     while cap.isOpened() and frame_count < max_frames:
         ret, raw_frame = cap.read()
         if not ret or raw_frame is None:
@@ -166,6 +176,14 @@ def track_player(video_path, start_time_sec, duration_sec, bbox):
 
         frame_count += 1
         frame = cv2.resize(raw_frame, (work_w, work_h), interpolation=cv2.INTER_NEAREST)
+        frame_hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+
+        # 📺 TV Camera Shot Cut Detection:
+        # If green grass ratio drops significantly (e.g. cut to close-up player face/replay), STOP tracking immediately!
+        curr_green_ratio = get_grass_ratio(frame_hsv)
+        if initial_green_ratio > 0.25 and curr_green_ratio < 0.15:
+            # Camera cut detected! Stop trajectory here so element vanishes clean
+            break
 
         try:
             success, box = tracker.update(frame)
@@ -177,26 +195,28 @@ def track_player(video_path, start_time_sec, duration_sec, bbox):
             cx = x + w / 2.0
             cy = y + h
 
-            dist_moved = np.hypot(cx - last_center_x if 'last_center_x' in locals() else cx - last_cx, 
-                                  cy - last_center_y if 'last_center_y' in locals() else cy - last_cy)
+            dist_moved = np.hypot(cx - last_cx, cy - last_cy)
+            color_ok = verify_color_match(frame_hsv, int(x), int(y), int(w), int(h), kit_hist)
 
-            # 🛡️ Verify if color matches original kit identity (prevents swapping green player with orange player)
-            color_ok = verify_color_match(frame, int(x), int(y), int(w), int(h), kit_hist)
+            if not color_ok:
+                color_mismatch_count += 1
+            else:
+                color_mismatch_count = max(0, color_mismatch_count - 1)
+
+            # If color mismatch persists for > 4 frames (lost player / shot cut), stop tracking!
+            if color_mismatch_count > 4:
+                break
 
             if dist_moved <= max_jump_pixels and color_ok:
-                # Valid player tracking step
                 new_vx = cx - last_cx
                 new_vy = cy - last_cy
-                vx = 0.6 * vx + 0.4 * new_vx  # Smooth velocity
+                vx = 0.6 * vx + 0.4 * new_vx
                 vy = 0.6 * vy + 0.4 * new_vy
                 last_cx = cx
                 last_cy = cy
             else:
-                # 🛡️ Crossover / Color mismatch detected: Inertia prediction!
-                # Use current velocity vector to continue tracking original player smoothly
                 last_cx += vx
                 last_cy += vy
-                # Re-center tracker box at predicted position
                 pred_bx = int(last_cx - bw / 2.0)
                 pred_by = int(last_cy - bh)
                 try:
@@ -213,17 +233,8 @@ def track_player(video_path, start_time_sec, duration_sec, bbox):
                 "h": round(bh / work_h, 4)
             })
         else:
-            # Predict position using momentum for up to 5 lost frames
-            last_cx += vx
-            last_cy += vy
-            trajectory.append({
-                "frame": frame_count,
-                "time": round(frame_count / fps, 3),
-                "x": round(last_cx / work_w, 4),
-                "y": round(last_cy / work_h, 4),
-                "w": round(bw / work_w, 4),
-                "h": round(bh / work_h, 4)
-            })
+            # End tracking if player completely lost or camera cut
+            break
 
     cap.release()
 
