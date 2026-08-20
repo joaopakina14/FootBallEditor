@@ -555,7 +555,7 @@ canvas.addEventListener('mouseup', async e => {
 
         const trackDuration = ds.duration === -1 ? 6.0 : ds.duration
 
-        showToast('\uD83C\uDFAF A rastrear movimento do jogador com OpenCV...', 0)
+        showToast('\uD83C\uDFAF A analisar e fixar movimento no jogador...', 0)
 
         const result = await ipcRenderer.invoke('track-player', {
           videoPath: clip.inputPath,
