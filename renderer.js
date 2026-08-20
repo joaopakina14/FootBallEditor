@@ -702,7 +702,9 @@ canvas.addEventListener('mouseup', async e => {
         const normW = w / vRect.displayWidth
         const normH = h / vRect.displayHeight
 
-        const trackDuration = ds.duration === -1 ? 6.0 : ds.duration
+        // If infinite (duration = -1), track continuously until player exits camera or video ends
+        const remainingVidTime = (video.duration || 9999) - (video.currentTime || 0)
+        const trackDuration = ds.duration === -1 ? Math.max(60.0, remainingVidTime) : ds.duration
 
         showToast('\uD83C\uDFAF A analisar e fixar movimento no jogador...', 0)
 
