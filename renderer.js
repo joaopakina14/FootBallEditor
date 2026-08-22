@@ -1209,6 +1209,71 @@ function updateAnnotationBadge() {
   else { delete btnEditMode.dataset.count; btnEditMode.title = 'Modo de desenho (E)' }
 }
 
+// ── Drag & Drop Panel Logic ──────────────────────────────
+function makeDraggable(el) {
+  let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+  
+  el.addEventListener('mousedown', dragMouseDown);
+
+  function dragMouseDown(e) {
+    // Apenas arrastar com o clique esquerdo (button 0)
+    if (e.button !== 0) return;
+    
+    // Ignorar arrastamento se clicou em botões de ação ou seletores do painel
+    if (
+      e.target.closest('button') || 
+      e.target.closest('.dp-color') || 
+      e.target.closest('.dp-width') || 
+      e.target.closest('.dp-dur') || 
+      e.target.closest('.dp-action')
+    ) {
+      return;
+    }
+    
+    e.preventDefault();
+    
+    // Registar coordenadas iniciais do rato
+    pos3 = e.clientX;
+    pos4 = e.clientY;
+    
+    document.addEventListener('mouseup', closeDragElement);
+    document.addEventListener('mousemove', elementDrag);
+  }
+
+  function elementDrag(e) {
+    e.preventDefault();
+    
+    // Calcular a distância percorrida pelo rato
+    pos1 = pos3 - e.clientX;
+    pos2 = pos4 - e.clientY;
+    pos3 = e.clientX;
+    pos4 = e.clientY;
+    
+    // Novas posições da caixa
+    let newTop = el.offsetTop - pos2;
+    let newLeft = el.offsetLeft - pos1;
+    
+    // Restringir limites ao tamanho da janela (viewport)
+    const maxLeft = window.innerWidth - el.offsetWidth;
+    const maxTop = window.innerHeight - el.offsetHeight;
+    
+    newLeft = Math.max(0, Math.min(newLeft, maxLeft));
+    newTop = Math.max(38, Math.min(newTop, maxTop)); // 38px de margem superior para o cabeçalho
+    
+    el.style.top = newTop + "px";
+    el.style.left = newLeft + "px";
+    el.style.transform = "none"; // Remove o translateY(-50%) inicial do CSS para não saltar
+  }
+
+  function closeDragElement() {
+    document.removeEventListener('mouseup', closeDragElement);
+    document.removeEventListener('mousemove', elementDrag);
+  }
+}
+
+// Inicializar arrastamento no painel
+makeDraggable(document.getElementById('drawPanel'));
+
 // Initial license validation check on boot
 checkLicense();
 
