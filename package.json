@@ -1,6 +1,6 @@
 {
     "name":  "football-editor",
-    "version":  "1.0.1",
+    "version":  "1.0.2",
     "description":  "Video player for football analysis",
     "main":  "main.js",
     "scripts":  {
@@ -25,12 +25,15 @@
                   "appId":  "com.fieldvision.app",
                   "productName":  "FieldVision",
                   "win":  {
-                              "target":  "nsis"
+                              "target":  "nsis",
+                              "icon":  "assets/icon.ico"
                           },
                   "nsis":  {
                                "oneClick":  false,
                                "allowToChangeInstallationDirectory":  true,
                                "createDesktopShortcut":  "always",
+                               "installerIcon": "assets/icon.ico",
+                               "uninstallerIcon": "assets/icon.ico",
                                "artifactName":  "FieldVision-Setup-${version}.${ext}"
                            },
                   "files":  [
