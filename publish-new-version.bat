@@ -1,12 +1,23 @@
 @echo off
 chcp 65001 > nul
+
+:: Fetch current and suggested version
+for /f "tokens=*" %%i in ('python -c "import json; print(json.load(open('package.json'))['version'])"') do set CURRENT_VERSION=%%i
+for /f "tokens=*" %%i in ('python -c "import json; v=json.load(open('package.json'))['version'].split('.'); v[-1]=str(int(v[-1])+1); print('v'+'.'.join(v))"') do set SUGGESTED_VERSION=%%i
+
 echo ====================================================
 echo   FieldVision - Publicador de Versoes
+echo ====================================================
+echo   Versao atual: %CURRENT_VERSION%
+echo   Versao sugerida: %SUGGESTED_VERSION%
 echo ====================================================
 echo.
 
 :: 1. Ask for version tag
-set /p VERSION="Insira o numero da nova versao (ex: v1.0.1): "
+set /p VERSION="Insira o numero da nova versao (ex: %SUGGESTED_VERSION%): "
+if "%VERSION%"=="" (
+    set VERSION=%SUGGESTED_VERSION%
+)
 if "%VERSION%"=="" (
     echo.
     echo [Erro] O numero da versao nao pode estar vazio.
