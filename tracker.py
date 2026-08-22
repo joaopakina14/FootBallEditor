@@ -76,7 +76,7 @@ def verify_color_match(frame_hsv, bx, by, bw, bh, target_hist):
 
     curr_hist = extract_kit_color_signature(frame_hsv, bx, by, bw, bh)
     if curr_hist is None:
-        return True
+        return False
 
     score = cv2.compareHist(target_hist, curr_hist, cv2.HISTCMP_CORREL)
     return score > 0.12
@@ -192,6 +192,21 @@ def track_player(video_path, start_time_sec, duration_sec, bbox):
 
         if success and box is not None:
             x, y, w, h = [float(v) for v in box]
+            
+            # Stop tracking if the bounding box is mostly out of screen bounds
+            overlap_x1 = max(0.0, x)
+            overlap_y1 = max(0.0, y)
+            overlap_x2 = min(float(work_w), x + w)
+            overlap_y2 = min(float(work_h), y + h)
+
+            overlap_w = max(0.0, overlap_x2 - overlap_x1)
+            overlap_h = max(0.0, overlap_y2 - overlap_y1)
+            overlap_area = overlap_w * overlap_h
+            box_area = w * h
+
+            if box_area <= 0 or (overlap_area / box_area) < 0.15:
+                break
+
             cx = x + w / 2.0
             cy = y + h
 
