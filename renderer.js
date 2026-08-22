@@ -478,11 +478,17 @@ async function doCut() {
 
   if (duration < 0.5) { showToast('\u274C Seleciona pelo menos 0.5 segundos', 3000); return }
 
-  // Build output path
+  // Incrementar e guardar o contador persistente de cortes para este vídeo
+  const videoKey = 'cut_count_' + clip.inputPath
+  let cutCount   = parseInt(localStorage.getItem(videoKey) || '0')
+  cutCount++
+  localStorage.setItem(videoKey, cutCount.toString())
+
+  // Build output path: cut[N]_[original_name].[ext]
   const dir      = path.dirname(clip.inputPath)
   const ext      = path.extname(clip.inputPath)
   const base     = path.basename(clip.inputPath, ext)
-  const outputPath = path.join(dir, `${base}_clip_${formatTimeFile(startTime)}-${formatTimeFile(endTime)}${ext}`)
+  const outputPath = path.join(dir, `cut${cutCount}_${base}${ext}`)
 
   // ★ Filter annotations overlapping with [startTime, endTime]
   const targetAnns = ds.annotations.filter(ann => {
