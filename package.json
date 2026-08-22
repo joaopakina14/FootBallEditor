@@ -25,6 +25,12 @@
     "win": {
       "target": "nsis"
     },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": "always",
+      "artifactName": "FieldVision-Setup-${version}.${ext}"
+    },
     "files": [
       "**/*",
       "!FieldVision-website/**/*",
