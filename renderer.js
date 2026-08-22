@@ -3,6 +3,465 @@ const path = require('path')
 
 // ── Licensing state ───────────────────────────────────────
 let isPro = false
+
+// ── Translations / i18n ──────────────────────────────────
+let currentAppLang = localStorage.getItem('fv_app_lang') || 'en';
+
+const appTranslations = {
+  pt: {
+    "empty-title": "Sem vídeo carregado",
+    "empty-desc": "Abre um ficheiro de vídeo para começar",
+    "empty-btn": "Abrir Vídeo",
+    "empty-formats": "MP4 • MKV • AVI • MOV • WMV • WebM e mais",
+    "dp-tools": "Ferramentas",
+    "dp-color": "Cor",
+    "dp-width": "Espessura",
+    "dp-duration": "Duração",
+    "dp-undo": "↺ Desfazer",
+    "dp-redo": "↻ Refazer",
+    "dp-clear": "Limpar",
+    "filename-empty": "—",
+    "modal-title": "Licenciamento FieldVision",
+    "modal-status": "Estado: ",
+    "status-free": "Versão de Teste (Free)",
+    "status-pro": "Pro Ativa",
+    "modal-inst-free": "Introduz a tua chave Pro enviada pelo Lemon Squeezy para remover marcas de água e desbloquear anotações e IA ilimitadas.",
+    "modal-inst-pro": "A tua licença Pro está ativa e validada neste computador. Obrigado pelo teu suporte!",
+    "btn-activate": "Ativar FieldVision Pro",
+    "btn-deactivate": "Desativar Licença",
+    "modal-buy-text": "Ainda não tens chave? ",
+    "modal-buy-link": "Comprar Licença Pro (€29/ano)",
+    "toast-tracker-select": "Clica e arrasta no canvas para desenhar uma caixa à volta do jogador a rastrear.",
+    "toast-tracker-active": "IA a rastrear o jogador... Pressiona qualquer tecla para parar.",
+    
+    // Titles (tooltips)
+    "title-activate": "Ativar FieldVision Pro",
+    "title-minimize": "Minimizar",
+    "title-maximize": "Maximizar",
+    "title-close": "Fechar",
+    "title-pencil": "Lápis",
+    "title-line": "Linha",
+    "title-dashed": "Tracejado",
+    "title-arrow": "Seta",
+    "title-circle": "Círculo",
+    "title-rect": "Retângulo",
+    "title-track": "Rastrear Jogador (IA/OpenCV)",
+    "title-open": "Abrir ficheiro",
+    "title-play": "Play / Pause",
+    "title-stop": "Parar",
+    "title-mute": "Mudo / Som",
+    "title-speed": "Velocidade",
+    "title-clipin": "Marcar início do corte (I)",
+    "title-clipout": "Marcar fim do corte (O)",
+    "title-cut": "Cortar e guardar (X)",
+    "title-edit": "Modo de desenho (E)",
+    "title-fs": "Ecrã inteiro",
+    
+    // License states
+    "license-badge-free": "Ativar Pro ⚡",
+    "license-badge-pro": "PRO ATIVO ✓",
+    "license-placeholder": "Ex: 490A40CB-B120-4993-BEA7-...",
+    
+    // Toasts
+    "toast-license-input": "⚠️ Introduz uma chave de licença!",
+    "toast-license-checking": "⏳ A verificar chave...",
+    "toast-license-activated": "✅ FieldVision Pro ativado com sucesso!",
+    "toast-license-deactivating": "⏳ A remover licença...",
+    "toast-license-deactivated": "✅ Licença desativada.",
+    "toast-license-error": "❌ Erro: {0}",
+    "toast-load-success": "📂 {0} anotação(ões) carregada(s)",
+    "toast-limit-export": "⚠️ Limite Free: Atingiste o limite de 3 exportações mensais. Compra o Pro para exportações ilimitadas!",
+    "toast-select-duration": "❌ Seleciona pelo menos 0.5 segundos",
+    "toast-export-success": "✅ {0}{1}",
+    "toast-export-error": "❌ Erro: {0}",
+    "toast-limit-track": "⚠️ Limite Trial: Já utilizou o rastreio automático 5 vezes. Adquira a licença Pro para uso ilimitado!",
+    "toast-track-free-limit": "⚠️ Rastreio Free limitado a 2 segundos de clipe...",
+    "toast-track-analyzing": "🎯 A analisar e fixar movimento no jogador...",
+    "toast-track-success-trial": "🎉 Rastreio concluído (Teste {0} de 5). Adquire o Pro!",
+    "toast-track-success-pro": "✅ Rastreio concluído: {0} pontos gravados!",
+    "toast-track-error": "❌ Falha no rastreio: {0}",
+    "toast-limit-annotations": "⚠️ Limite Free: Máximo de 3 anotações por vídeo atingido. Adquire o Pro para anotações ilimitadas!",
+    "toast-limit-annotations-short": "⚠️ Limite Free: Máximo de 3 anotações por vídeo atingido.",
+    "toast-link-players": "🔗 Linha curva elástica ligada aos 2 jogadores!",
+    "toast-attach-player": "🚗 Anotação presa ao jogador! Vai de boleia!",
+    "toast-open-folder": "Abrir pasta"
+  },
+  en: {
+    "empty-title": "No video loaded",
+    "empty-desc": "Open a video file to get started",
+    "empty-btn": "Open Video",
+    "empty-formats": "MP4 • MKV • AVI • MOV • WMV • WebM and more",
+    "dp-tools": "Tools",
+    "dp-color": "Color",
+    "dp-width": "Width",
+    "dp-duration": "Duration",
+    "dp-undo": "↺ Undo",
+    "dp-redo": "↻ Redo",
+    "dp-clear": "Clear",
+    "filename-empty": "—",
+    "modal-title": "FieldVision Licensing",
+    "modal-status": "Status: ",
+    "status-free": "Free Trial Version",
+    "status-pro": "Pro Active",
+    "modal-inst-free": "Enter your Pro key sent by Lemon Squeezy to remove watermarks and unlock unlimited annotations and AI tracking.",
+    "modal-inst-pro": "Your Pro licence is active and validated on this computer. Thank you for your support!",
+    "btn-activate": "Activate FieldVision Pro",
+    "btn-deactivate": "Deactivate Licence",
+    "modal-buy-text": "Don't have a key yet? ",
+    "modal-buy-link": "Buy Pro Licence (€29/year)",
+    "toast-tracker-select": "Click and drag on the canvas to draw a box around the player to track.",
+    "toast-tracker-active": "AI tracking player... Press any key to stop.",
+    
+    // Titles
+    "title-activate": "Activate FieldVision Pro",
+    "title-minimize": "Minimize",
+    "title-maximize": "Maximize",
+    "title-close": "Close",
+    "title-pencil": "Pencil",
+    "title-line": "Line",
+    "title-dashed": "Dashed Line",
+    "title-arrow": "Arrow",
+    "title-circle": "Circle",
+    "title-rect": "Rectangle",
+    "title-track": "Track Player (AI/OpenCV)",
+    "title-open": "Open file",
+    "title-play": "Play / Pause",
+    "title-stop": "Stop",
+    "title-mute": "Mute / Unmute",
+    "title-speed": "Speed",
+    "title-clipin": "Mark clip start (I)",
+    "title-clipout": "Mark clip end (O)",
+    "title-cut": "Cut and save (X)",
+    "title-edit": "Draw mode (E)",
+    "title-fs": "Fullscreen",
+    
+    // License states
+    "license-badge-free": "Activate Pro ⚡",
+    "license-badge-pro": "PRO ACTIVE ✓",
+    "license-placeholder": "Ex: 490A40CB-B120-4993-BEA7-...",
+    
+    // Toasts
+    "toast-license-input": "⚠️ Please enter a licence key!",
+    "toast-license-checking": "⏳ Checking key...",
+    "toast-license-activated": "✅ FieldVision Pro activated successfully!",
+    "toast-license-deactivating": "⏳ Removing licence...",
+    "toast-license-deactivated": "✅ Licence deactivated.",
+    "toast-license-error": "❌ Error: {0}",
+    "toast-load-success": "📂 {0} annotation(s) loaded",
+    "toast-limit-export": "⚠️ Free Limit: You have reached the monthly limit of 3 exports. Buy Pro for unlimited exports!",
+    "toast-select-duration": "❌ Select at least 0.5 seconds",
+    "toast-export-success": "✅ {0}{1}",
+    "toast-export-error": "❌ Error: {0}",
+    "toast-limit-track": "⚠️ Trial Limit: You have already used AI tracking 5 times. Buy Pro for unlimited usage!",
+    "toast-track-free-limit": "⚠️ Free tracking limited to 2 seconds of clip...",
+    "toast-track-analyzing": "🎯 Analyzing and locking motion on player...",
+    "toast-track-success-trial": "🎉 Tracking complete (Trial {0} of 5). Buy Pro!",
+    "toast-track-success-pro": "✅ Tracking complete: {0} points recorded!",
+    "toast-track-error": "❌ Tracking failed: {0}",
+    "toast-limit-annotations": "⚠️ Free Limit: Maximum of 3 annotations per video reached. Buy Pro for unlimited annotations!",
+    "toast-limit-annotations-short": "⚠️ Free Limit: Maximum of 3 annotations per video reached.",
+    "toast-link-players": "🔗 Elastic link line attached to both players!",
+    "toast-attach-player": "🚗 Annotation attached to player! Hitching a ride!",
+    "toast-open-folder": "Open folder"
+  },
+  es: {
+    "empty-title": "Sin video cargado",
+    "empty-desc": "Abre un archivo de video para comenzar",
+    "empty-btn": "Abrir Video",
+    "empty-formats": "MP4 • MKV • AVI • MOV • WMV • WebM y más",
+    "dp-tools": "Herramientas",
+    "dp-color": "Color",
+    "dp-width": "Grosor",
+    "dp-duration": "Duración",
+    "dp-undo": "↺ Deshacer",
+    "dp-redo": "↻ Rehacer",
+    "dp-clear": "Limpiar",
+    "filename-empty": "—",
+    "modal-title": "Licencia de FieldVision",
+    "modal-status": "Estado: ",
+    "status-free": "Versión de Prueba (Free)",
+    "status-pro": "Pro Activa",
+    "modal-inst-free": "Introduce tu clave Pro enviada por Lemon Squeezy para eliminar marcas de agua y desbloquear anotaciones e IA ilimitadas.",
+    "modal-inst-pro": "Tu licencia Pro está activa y validada en este ordenador. ¡Gracias por tu apoyo!",
+    "btn-activate": "Activar FieldVision Pro",
+    "btn-deactivate": "Desactivar Licencia",
+    "modal-buy-text": "¿Aún no tienes clave? ",
+    "modal-buy-link": "Comprar Licencia Pro (€29/año)",
+    "toast-tracker-select": "Haz clic y arrastra en el lienzo para dibujar un cuadro alrededor del jugador a rastrear.",
+    "toast-tracker-active": "IA rastreando al jugador... Presiona cualquier tecla para detener.",
+    
+    // Titles
+    "title-activate": "Activar FieldVision Pro",
+    "title-minimize": "Minimizar",
+    "title-maximize": "Maximizar",
+    "title-close": "Cerrar",
+    "title-pencil": "Lápiz",
+    "title-line": "Línea",
+    "title-dashed": "Línea discontinua",
+    "title-arrow": "Flecha",
+    "title-circle": "Círculo",
+    "title-rect": "Rectángulo",
+    "title-track": "Rastrear Jugador (IA/OpenCV)",
+    "title-open": "Abrir archivo",
+    "title-play": "Reproducir / Pausa",
+    "title-stop": "Detener",
+    "title-mute": "Silenciar / Sonido",
+    "title-speed": "Velocidad",
+    "title-clipin": "Marcar inicio del corte (I)",
+    "title-clipout": "Marcar fin del corte (O)",
+    "title-cut": "Cortar y guardar (X)",
+    "title-edit": "Modo dibujo (E)",
+    "title-fs": "Pantalla completa",
+    
+    // License states
+    "license-badge-free": "Activar Pro ⚡",
+    "license-badge-pro": "PRO ACTIVO ✓",
+    "license-placeholder": "Ex: 490A40CB-B120-4993-BEA7-...",
+    
+    // Toasts
+    "toast-license-input": "⚠️ ¡Por favor, introduce una clave de licencia!",
+    "toast-license-checking": "⏳ Verificando clave...",
+    "toast-license-activated": "✅ ¡FieldVision Pro activado con éxito!",
+    "toast-license-deactivating": "⏳ Eliminando licencia...",
+    "toast-license-deactivated": "✅ Licencia desactivada.",
+    "toast-license-error": "❌ Error: {0}",
+    "toast-load-success": "📂 {0} anotación(es) cargada(s)",
+    "toast-limit-export": "⚠️ Límite Free: Has alcanzado el límite mensual de 3 exportaciones. ¡Compra Pro para exportaciones ilimitadas!",
+    "toast-select-duration": "❌ Selecciona al menos 0.5 segundos",
+    "toast-export-success": "✅ {0}{1}",
+    "toast-export-error": "❌ Error: {0}",
+    "toast-limit-track": "⚠️ Límite Trial: Ya has usado el rastreo automático 5 veces. ¡Compra Pro para uso ilimitado!",
+    "toast-track-free-limit": "⚠️ Rastreo Free limitado a 2 segundos de clip...",
+    "toast-track-analyzing": "🎯 Analizando y fijando el movimiento en el jugador...",
+    "toast-track-success-trial": "🎉 Rastreo completado (Prueba {0} de 5). ¡Compra Pro!",
+    "toast-track-success-pro": "✅ Rastreo completado: ¡{0} puntos grabados!",
+    "toast-track-error": "❌ Fallo en el rastreo: {0}",
+    "toast-limit-annotations": "⚠️ Límite Free: Máximo de 3 anotaciones por video alcanzado. ¡Compra Pro para anotaciones ilimitadas!",
+    "toast-limit-annotations-short": "⚠️ Límite Free: Máximo de 3 anotaciones por video alcanzado.",
+    "toast-link-players": "🔗 ¡Línea de enlace elástico conectada a ambos jugadores!",
+    "toast-attach-player": "🚗 ¡Anotación fijada al jugador! ¡Se va de paseo!",
+    "toast-open-folder": "Abrir carpeta"
+  },
+  fr: {
+    "empty-title": "Aucune vidéo chargée",
+    "empty-desc": "Ouvrez un fichier vidéo pour commencer",
+    "empty-btn": "Ouvrir Vidéo",
+    "empty-formats": "MP4 • MKV • AVI • MOV • WMV • WebM et plus",
+    "dp-tools": "Outils",
+    "dp-color": "Couleur",
+    "dp-width": "Épaisseur",
+    "dp-duration": "Durée",
+    "dp-undo": "↺ Annuler",
+    "dp-redo": "↻ Rétablir",
+    "dp-clear": "Effacer",
+    "filename-empty": "—",
+    "modal-title": "Licence FieldVision",
+    "modal-status": "Statut: ",
+    "status-free": "Version d'essai (Free)",
+    "status-pro": "Pro Active",
+    "modal-inst-free": "Entrez votre clé Pro envoyée par Lemon Squeezy pour supprimer les filigranes et débloquer les annotations et le suivi IA illimités.",
+    "modal-inst-pro": "Votre licence Pro est active et validée sur cet ordinateur. Merci pour votre soutien !",
+    "btn-activate": "Activer FieldVision Pro",
+    "btn-deactivate": "Désactiver la licence",
+    "modal-buy-text": "Vous n'avez pas encore de clé ? ",
+    "modal-buy-link": "Acheter une licence Pro (€29/an)",
+    "toast-tracker-select": "Cliquez et glissez sur le canevas pour dessiner une boîte autour du joueur à suivre.",
+    "toast-tracker-active": "IA en train de suivre le joueur... Appuyez sur n'importe quelle touche pour arrêter.",
+    
+    // Titles
+    "title-activate": "Activer FieldVision Pro",
+    "title-minimize": "Réduire",
+    "title-maximize": "Agrandir",
+    "title-close": "Fermer",
+    "title-pencil": "Crayon",
+    "title-line": "Ligne",
+    "title-dashed": "Ligne pointillée",
+    "title-arrow": "Flèche",
+    "title-circle": "Cercle",
+    "title-rect": "Rectangle",
+    "title-track": "Suivre le joueur (IA/OpenCV)",
+    "title-open": "Ouvrir un fichier",
+    "title-play": "Lecture / Pause",
+    "title-stop": "Arrêter",
+    "title-mute": "Muet / Activer le son",
+    "title-speed": "Vitesse",
+    "title-clipin": "Marcar le début du clip (I)",
+    "title-clipout": "Marcar la fin du clip (O)",
+    "title-cut": "Couper et sauvegarder (X)",
+    "title-edit": "Mode dessin (E)",
+    "title-fs": "Plein écran",
+    
+    // License states
+    "license-badge-free": "Activer Pro ⚡",
+    "license-badge-pro": "PRO ACTIF ✓",
+    "license-placeholder": "Ex: 490A40CB-B120-4993-BEA7-...",
+    
+    // Toasts
+    "toast-license-input": "⚠️ Veuillez saisir une clé de licence !",
+    "toast-license-checking": "⏳ Vérification de la clé...",
+    "toast-license-activated": "✅ FieldVision Pro activé avec succès !",
+    "toast-license-deactivating": "⏳ Désactivation de la licence...",
+    "toast-license-deactivated": "✅ Licence désactivée.",
+    "toast-license-error": "❌ Échec : {0}",
+    "toast-load-success": "📂 {0} annotation(s) chargée(s)",
+    "toast-limit-export": "⚠️ Limite Free : Vous avez atteint la limite mensuelle de 3 exportations. Achetez Pro pour des exportations illimitées !",
+    "toast-select-duration": "❌ Sélectionnez au moins 0.5 seconde",
+    "toast-export-success": "✅ {0}{1}",
+    "toast-export-error": "❌ Échec : {0}",
+    "toast-limit-track": "⚠️ Limite d'essai : Vous avez déjà utilisé le suivi automatique 5 fois. Achetez Pro pour un usage illimité !",
+    "toast-track-free-limit": "⚠️ Suivi Free limité à 2 secondes de clip...",
+    "toast-track-analyzing": "🎯 Analyse et verrouillage du mouvement sur le joueur...",
+    "toast-track-success-trial": "🎉 Suivi terminé (Essai {0} sur 5). Achetez Pro !",
+    "toast-track-success-pro": "✅ Suivi terminé : {0} points enregistrés !",
+    "toast-track-error": "❌ Échec du suivi : {0}",
+    "toast-limit-annotations": "⚠️ Limite Free : Maximum de 3 annotations par vidéo atteint. Achetez Pro pour des annotations illimitées !",
+    "toast-limit-annotations-short": "⚠️ Limite Free : Maximum de 3 annotations par vidéo atteint.",
+    "toast-link-players": "🔗 Ligne de liaison élastique connectée aux deux joueurs !",
+    "toast-attach-player": "🚗 Annotation attachée au joueur ! En route !",
+    "toast-open-folder": "Ouvrir le dossier"
+  },
+  de: {
+    "empty-title": "Keine Videodatei geladen",
+    "empty-desc": "Öffnen Sie ein Video, um zu beginnen",
+    "empty-btn": "Video Öffnen",
+    "empty-formats": "MP4 • MKV • AVI • MOV • WMV • WebM und mehr",
+    "dp-tools": "Werkzeuge",
+    "dp-color": "Farbe",
+    "dp-width": "Stärke",
+    "dp-duration": "Dauer",
+    "dp-undo": "↺ Rückgängig",
+    "dp-redo": "↻ Wiederholen",
+    "dp-clear": "Löschen",
+    "filename-empty": "—",
+    "modal-title": "FieldVision Lizenzierung",
+    "modal-status": "Status: ",
+    "status-free": "Testversion (Free)",
+    "status-pro": "Pro Aktiv",
+    "modal-inst-free": "Geben Sie Ihren Pro-Schlüssel ein, der von Lemon Squeezy gesendet wurde, um Wasserzeichen zu entfernen und unbegrenzte Anmerkungen sowie KI-Tracking freizuschalten.",
+    "modal-inst-pro": "Ihre Pro-Lizenz ist auf diesem Computer aktiv und validiert. Vielen Dank für Ihre Unterstützung!",
+    "btn-activate": "FieldVision Pro Aktivieren",
+    "btn-deactivate": "Lizenz Deaktivieren",
+    "modal-buy-text": "Haben Sie noch keinen Schlüssel? ",
+    "modal-buy-link": "Pro-Lizenz kaufen (€29/Jahr)",
+    "toast-tracker-select": "Klicken und ziehen Sie auf der Leinwand, um ein Kästchen um den zu verfolgenden Spieler zu zeichnen.",
+    "toast-tracker-active": "KI verfolgt Spieler... Drücken Sie eine beliebige Taste, um zu stoppen.",
+    
+    // Titles
+    "title-activate": "FieldVision Pro Aktivieren",
+    "title-minimize": "Minimieren",
+    "title-maximize": "Maximieren",
+    "title-close": "Schließen",
+    "title-pencil": "Stift",
+    "title-line": "Linie",
+    "title-dashed": "Gestrichelte Linie",
+    "title-arrow": "Pfeil",
+    "title-circle": "Kreis",
+    "title-rect": "Rechteck",
+    "title-track": "Spieler verfolgen (KI/OpenCV)",
+    "title-open": "Datei öffnen",
+    "title-play": "Wiedergabe / Pause",
+    "title-stop": "Stoppen",
+    "title-mute": "Stumm / Ton",
+    "title-speed": "Geschwindigkeit",
+    "title-clipin": "Clip-Anfang markieren (I)",
+    "title-clipout": "Clip-Ende markieren (O)",
+    "title-cut": "Schneiden und speichern (X)",
+    "title-edit": "Zeichenmodus (E)",
+    "title-fs": "Vollbild",
+    
+    // License states
+    "license-badge-free": "Pro Aktivieren ⚡",
+    "license-badge-pro": "PRO AKTIV ✓",
+    "license-placeholder": "Ex: 490A40CB-B120-4993-BEA7-...",
+    
+    // Toasts
+    "toast-license-input": "⚠️ Bitte geben Sie einen Lizenzschlüssel ein!",
+    "toast-license-checking": "⏳ Schlüssel wird überprüft...",
+    "toast-license-activated": "✅ FieldVision Pro erfolgreich aktiviert!",
+    "toast-license-deactivating": "⏳ Lizenz wird deaktiviert...",
+    "toast-license-deactivated": "✅ Lizenz deaktiviert.",
+    "toast-license-error": "❌ Fehler: {0}",
+    "toast-load-success": "📂 {0} Anmerkung(en) geladen",
+    "toast-limit-export": "⚠️ Free-Limit: Sie haben das monatliche Limit von 3 Exporten erreicht. Kaufen Sie Pro für unbegrenzte Exporte!",
+    "toast-select-duration": "❌ Wählen Sie mindestens 0.5 Sekunden aus",
+    "toast-export-success": "✅ {0}{1}",
+    "toast-export-error": "❌ Fehler: {0}",
+    "toast-limit-track": "⚠️ Test-Limit: Sie haben das automatische Tracking bereits 5 Mal verwendet. Kaufen Sie Pro für unbegrenzte Nutzung!",
+    "toast-track-free-limit": "⚠️ Free-Tracking auf 2 Sekunden Clip begrenzt...",
+    "toast-track-analyzing": "🎯 Spielerbewegung wird analysiert und fixiert...",
+    "toast-track-success-trial": "🎉 Tracking abgeschlossen (Test {0} von 5). Kaufen Sie Pro!",
+    "toast-track-success-pro": "✅ Tracking abgeschlossen: {0} Punkte aufgezeichnet!",
+    "toast-track-error": "❌ Tracking fehlgeschlagen: {0}",
+    "toast-limit-annotations": "⚠️ Free-Limit: Maximum von 3 Anmerkungen pro Video erreicht. Kaufen Sie Pro für unbegrenzte Anmerkungen!",
+    "toast-limit-annotations-short": "⚠️ Free-Limit: Maximum von 3 Anmerkungen pro Video erreicht.",
+    "toast-link-players": "🔗 Elastische Verbindungslinie zwischen beiden Spielern aktiv!",
+    "toast-attach-player": "🚗 Anmerkung an Spieler angeheftet!",
+    "toast-open-folder": "Ordner öffnen"
+  }
+};
+
+function t(key, defaultValue = '', ...args) {
+  const dict = appTranslations[currentAppLang];
+  if (!dict || !dict[key]) {
+    return formatString(defaultValue, ...args);
+  }
+  return formatString(dict[key], ...args);
+}
+
+function formatString(str, ...args) {
+  return str.replace(/{(\d+)}/g, (match, number) => {
+    return typeof args[number] !== 'undefined' ? args[number] : match;
+  });
+}
+
+function setAppLanguage(lang) {
+  if (!appTranslations[lang]) lang = 'en';
+  currentAppLang = lang;
+  localStorage.setItem('fv_app_lang', lang);
+  
+  // Set dropdown value
+  const select = document.getElementById('appLangSelect');
+  if (select) select.value = lang;
+
+  // Translate text content
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    if (appTranslations[lang][key]) {
+      el.textContent = appTranslations[lang][key];
+    }
+  });
+
+  // Translate titles (tooltips)
+  document.querySelectorAll('[data-i18n-title]').forEach(el => {
+    const key = el.getAttribute('data-i18n-title');
+    if (appTranslations[lang][key]) {
+      el.setAttribute('title', appTranslations[lang][key]);
+    }
+  });
+
+  // Translate placeholders
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+    const key = el.getAttribute('data-i18n-placeholder');
+    if (appTranslations[lang][key]) {
+      el.setAttribute('placeholder', appTranslations[lang][key]);
+    }
+  });
+
+  // Update dynamic elements
+  if (licenseBadge && statusVal) {
+    licenseBadge.textContent = appTranslations[lang][isPro ? 'license-badge-pro' : 'license-badge-free'];
+    statusVal.textContent = appTranslations[lang][isPro ? 'status-pro' : 'status-free'];
+  }
+}
+
+// Bind Lang Selector Event
+const appLangSelect = document.getElementById('appLangSelect');
+if (appLangSelect) {
+  appLangSelect.addEventListener('change', (e) => {
+    setAppLanguage(e.target.value);
+  });
+}
+
 let trackingTrialCount = parseInt(localStorage.getItem('trackingTrialCount') || '0')
 
 // ── Elements ──────────────────────────────────────────────
@@ -52,9 +511,9 @@ function updateLicenseUI(status, key) {
   isPro = (status === 'pro');
   
   if (isPro) {
-    licenseBadge.textContent = 'Pro Ativo ✓';
+    licenseBadge.textContent = appTranslations[currentAppLang]['license-badge-pro'];
     licenseBadge.className = 'license-badge pro';
-    statusVal.textContent = 'Versão Pro (Ativa)';
+    statusVal.textContent = appTranslations[currentAppLang]['status-pro'];
     statusVal.className = 'status-val pro';
     
     licenseInputGroup.style.display = 'none';
@@ -63,9 +522,9 @@ function updateLicenseUI(status, key) {
     const maskedKey = key ? `XXXX-XXXX-XXXX-${key.slice(-4)}` : 'Ativa';
     activeKeyDisplay.textContent = maskedKey;
   } else {
-    licenseBadge.textContent = 'Ativar Pro ⚡';
+    licenseBadge.textContent = appTranslations[currentAppLang]['license-badge-free'];
     licenseBadge.className = 'license-badge free';
-    statusVal.textContent = 'Versão de Teste (Free)';
+    statusVal.textContent = appTranslations[currentAppLang]['status-free'];
     statusVal.className = 'status-val free';
     
     licenseInputGroup.style.display = 'block';
@@ -82,6 +541,7 @@ async function checkLicense() {
 // Event Listeners for License modal
 licenseBadge.addEventListener('click', () => {
   checkLicense();
+setAppLanguage(currentAppLang);
   licenseModal.classList.add('open');
 });
 
@@ -98,7 +558,7 @@ buyLicenseLink.addEventListener('click', (e) => {
 btnActivateLicense.addEventListener('click', async () => {
   const key = licenseInput.value.trim();
   if (!key) {
-    showToast('⚠️ Introduz uma chave de licença!', 3000);
+    showToast(t('toast-license-input', '⚠️ Introduz uma chave de licença!'), 3000);
     return;
   }
   
@@ -109,11 +569,12 @@ btnActivateLicense.addEventListener('click', async () => {
   btnActivateLicense.disabled = false;
   
   if (res.success) {
-    showToast('✅ FieldVision Pro ativado com sucesso!', 4000);
+    showToast(t('toast-license-activated', '✅ FieldVision Pro ativado com sucesso!'), 4000);
     checkLicense();
+setAppLanguage(currentAppLang);
     licenseModal.classList.remove('open');
   } else {
-    showToast('❌ ' + res.error, 4000);
+    showToast(t('toast-license-error', '❌ Erro: {0}', res.error), 4000);
   }
 });
 
@@ -124,9 +585,10 @@ btnDeactivateLicense.addEventListener('click', async () => {
     if (res.success) {
       showToast('ℹ️ Licença desativada.', 3000);
       checkLicense();
+setAppLanguage(currentAppLang);
       licenseModal.classList.remove('open');
     } else {
-      showToast('❌ ' + res.error, 3000);
+      showToast(t('toast-license-error', '❌ Erro: {0}', res.error), 3000);
     }
   }
 });
@@ -352,7 +814,7 @@ async function loadAnnotations(videoPath) {
       redraw()
       updateTimelineMarkers()
       updateAnnotationBadge()
-      showToast(`\uD83D\uDCC2 ${result.annotations.length} anota\u00E7\u00E3o(oes) carregada(s)`, 2500)
+      showToast(t('toast-load-success', '📂 {0} anotação(ões) carregada(s)', result.annotations.length), 2500)
     }
   } catch (e) {
     console.warn('Could not load annotations:', e)
@@ -467,7 +929,7 @@ async function doCut() {
     exportsLog = exportsLog.filter(ts => ts > thirtyDaysAgo);
     
     if (exportsLog.length >= 3) {
-      showToast('⚠️ Limite Free: Atingiste o limite de 3 exportações mensais. Compra o Pro para exportações ilimitadas!', 5500);
+      showToast(t('toast-limit-export', '⚠️ Limite Free: Atingiste o limite de 3 exportações mensais. Compra o Pro para exportações ilimitadas!'), 5500);
       return;
     }
   }
@@ -476,7 +938,7 @@ async function doCut() {
   const endTime   = Math.max(clip.inTime, clip.outTime)
   const duration  = endTime - startTime
 
-  if (duration < 0.5) { showToast('\u274C Seleciona pelo menos 0.5 segundos', 3000); return }
+  if (duration < 0.5) { showToast(t('toast-select-duration', '❌ Seleciona pelo menos 0.5 segundos'), 3000); return }
 
   // Incrementar e guardar o contador persistente de cortes para este vídeo
   const videoKey = 'cut_count_' + clip.inputPath
@@ -585,10 +1047,10 @@ async function doCut() {
 
     const filename = path.basename(result.outputPath)
     const annInfo  = totalOverlaysCount > 0 ? ` + ${totalOverlaysCount} elemento(s) gravado(s)!` : ''
-    showToast(`\u2705 ${filename}${annInfo}`, 6000, result.outputPath)
+    showToast(t('toast-export-success', '✅ {0}{1}', filename, annInfo), 6000, result.outputPath)
     resetClipUI()
   } else {
-    showToast(`\u274C Erro: ${result.error}`, 5000)
+    showToast(t('toast-export-error', '❌ Erro: {0}', result.error), 5000)
     btnCut.disabled = false; btnCut.classList.add('ready')
   }
 }
@@ -599,7 +1061,7 @@ function showToast(message, duration = 3000, openPath = null) {
   clearTimeout(toastTimer); toast.innerHTML = ''
   const text = document.createElement('span'); text.textContent = message; toast.appendChild(text)
   if (openPath) {
-    const btn = document.createElement('button'); btn.className = 'toast-open-btn'; btn.textContent = 'Abrir pasta'
+    const btn = document.createElement('button'); btn.className = 'toast-open-btn'; btn.textContent = t('toast-open-folder', 'Abrir pasta')
     btn.addEventListener('click', () => ipcRenderer.invoke('show-in-folder', openPath))
     toast.appendChild(btn)
   }
@@ -805,7 +1267,7 @@ canvas.addEventListener('mouseup', async e => {
       if (vRect && clip.inputPath) {
         // Enforce 5-use limit on Free version
         if (!isPro && trackingTrialCount >= 5) {
-          showToast('⚠️ Limite Trial: Já utilizou o rastreio automático 5 vezes. Adquira a licença Pro para uso ilimitado!', 5500);
+          showToast(t('toast-limit-track', '⚠️ Limite Trial: Já utilizou o rastreio automático 5 vezes. Adquira a licença Pro para uso ilimitado!'), 5500);
           ds.current = null;
           redraw();
           return;
@@ -830,7 +1292,7 @@ canvas.addEventListener('mouseup', async e => {
           trackDuration = Math.min(trackDuration, 2.0);
           showToast('🎯 Rastreio Free limitado a 2 segundos de clipe...', 0);
         } else {
-          showToast('\uD83C\uDFAF A analisar e fixar movimento no jogador...', 0);
+          showToast(t('toast-track-analyzing', '🎯 A analisar e fixar movimento no jogador...'), 0);
         }
 
         const result = await ipcRenderer.invoke('track-player', {
@@ -859,7 +1321,7 @@ canvas.addEventListener('mouseup', async e => {
           if (!isPro) {
             showToast(`✅ Rastreio concluído (Teste ${trackingTrialCount} de 5). Adquire o Pro!`, 5000);
           } else {
-            showToast(`\u2705 Rastreio concluído: ${result.totalPoints} pontos gravados!`, 3500);
+            showToast(t('toast-track-success-pro', '✅ Rastreio concluído: {0} pontos gravados!', result.totalPoints), 3500);
           }
         } else {
           showToast(`\u274C Falha no rastreio: ${result.error || 'Não foi possível seguir o jogador'}`, 4000)
@@ -868,7 +1330,7 @@ canvas.addEventListener('mouseup', async e => {
     } else {
       // Enforce max 3 annotations limit on Free version
       if (!isPro && ds.annotations.length >= 3) {
-        showToast('⚠️ Limite Free: Máximo de 3 anotações por vídeo atingido. Adquire o Pro para anotações ilimitadas!', 5500);
+        showToast(t('toast-limit-annotations', '⚠️ Limite Free: Máximo de 3 anotações por vídeo atingido. Adquire o Pro para anotações ilimitadas!'), 5500);
         ds.current = null;
         redraw();
         return;
@@ -899,19 +1361,19 @@ canvas.addEventListener('mouseup', async e => {
           ann.duration  = Math.max(t1.duration, t2.duration)
         }
 
-        showToast('\uD83D\uDD17 Linha curva el\u00E1stica ligada aos 2 jogadores!', 2800)
+        showToast(t('toast-link-players', '🔗 Linha curva elástica ligada aos 2 jogadores!'), 2800) 
       } else if (attachStart) {
         ann.attachedTrackId = attachStart.trackId
         ann.attachOriginPos = attachStart.originPos
         const t1 = ds.annotations.find(a => a.id === attachStart.trackId)
         if (t1) { ann.timestamp = t1.timestamp; ann.duration = t1.duration }
-        showToast('\uD83D\uDE97 Anota\u00E7\u00E3o presa ao jogador! Vai de boleia!', 2500)
+        showToast(t('toast-attach-player', '🚗 Anotação presa ao jogador! Vai de boleia!'), 2500)
       } else if (attachEnd) {
         ann.attachedTrackId = attachEnd.trackId
         ann.attachOriginPos = attachEnd.originPos
         const t2 = ds.annotations.find(a => a.id === attachEnd.trackId)
         if (t2) { ann.timestamp = t2.timestamp; ann.duration = t2.duration }
-        showToast('\uD83D\uDE97 Anota\u00E7\u00E3o presa ao jogador! Vai de boleia!', 2500)
+        showToast(t('toast-attach-player', '🚗 Anotação presa ao jogador! Vai de boleia!'), 2500)
       }
 
       ds.annotations.push(ann); updateTimelineMarkers(); updateAnnotationBadge()
@@ -924,7 +1386,7 @@ canvas.addEventListener('mouseleave', () => {
   if (ds.drawing && ds.current && ds.tool === 'pencil' && ds.current.points.length > 1) {
     // Enforce max 3 annotations limit on Free version
     if (!isPro && ds.annotations.length >= 3) {
-      showToast('⚠️ Limite Free: Máximo de 3 anotações por vídeo atingido.', 4500);
+      showToast(t('toast-limit-annotations-short', '⚠️ Limite Free: Máximo de 3 anotações por vídeo atingido.'), 4500);
       ds.current = null;
       ds.drawing = false;
       redraw();
@@ -1453,4 +1915,5 @@ makeDraggable(document.getElementById('drawPanel'));
 
 // Initial license validation check on boot
 checkLicense();
+setAppLanguage(currentAppLang);
 

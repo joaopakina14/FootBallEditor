@@ -13,12 +13,21 @@
     <div class="titlebar-drag">
       <img src="assets/icon.png" class="app-logo-img" alt="FieldVision Logo" />
       <span class="app-title">FieldVision</span>
-      <button class="license-badge free" id="licenseBadge" title="Ativar FieldVision Pro">Ativar Pro ⚡</button>
+      <button class="license-badge free" id="licenseBadge" data-i18n-title="title-activate" data-i18n="license-badge-free">Ativar Pro ⚡</button>
+      <div class="lang-selector-wrap no-drag">
+        <select class="lang-select" id="appLangSelect">
+          <option value="en">EN</option>
+          <option value="es">ES</option>
+          <option value="fr">FR</option>
+          <option value="pt" selected>PT</option>
+          <option value="de">DE</option>
+        </select>
+      </div>
     </div>
     <div class="titlebar-controls">
-      <button class="tb-btn" id="btn-minimize" title="Minimizar">&#8211;</button>
-      <button class="tb-btn" id="btn-maximize" title="Maximizar">&#9744;</button>
-      <button class="tb-btn close" id="btn-close" title="Fechar">&#10005;</button>
+      <button class="tb-btn" id="btn-minimize" data-i18n-title="title-minimize">&#8211;</button>
+      <button class="tb-btn" id="btn-maximize" data-i18n-title="title-maximize">&#9744;</button>
+      <button class="tb-btn close" id="btn-close" data-i18n-title="title-close">&#10005;</button>
     </div>
   </div>
 
@@ -27,10 +36,10 @@
     <!-- Empty state -->
     <div class="empty-state" id="emptyState">
       <div class="empty-icon">&#9654;</div>
-      <h2>Sem v&#237;deo carregado</h2>
-      <p>Abre um ficheiro de v&#237;deo para come&#231;ar</p>
-      <button class="btn-open" id="btnOpenEmpty">Abrir V&#237;deo</button>
-      <p class="formats">MP4 &#183; MKV &#183; AVI &#183; MOV &#183; WMV &#183; WebM e mais</p>
+      <h2 data-i18n="empty-title">Sem v&#237;deo carregado</h2>
+      <p data-i18n="empty-desc">Abre um ficheiro de v&#237;deo para come&#231;ar</p>
+      <button class="btn-open" id="btnOpenEmpty" data-i18n="empty-btn">Abrir V&#237;deo</button>
+      <p class="formats" data-i18n="empty-formats">MP4 &#183; MKV &#183; AVI &#183; MOV &#183; WMV &#183; WebM e mais</p>
     </div>
 
     <!-- Player -->
@@ -52,18 +61,18 @@
 
       <!-- Drawing toolbar -->
       <div class="draw-panel" id="drawPanel">
-        <div class="dp-label">Ferramentas</div>
+        <div class="dp-label" data-i18n="dp-tools">Ferramentas</div>
         <div class="dp-tools-grid">
-          <button class="dp-tool active" data-tool="pencil" title="Lapis">&#9998;</button>
-          <button class="dp-tool" data-tool="line"   title="Linha">&#9585;</button>
-          <button class="dp-tool" data-tool="dashed" title="Tracejado">- -</button>
-          <button class="dp-tool" data-tool="arrow"  title="Seta">&#10145;</button>
-          <button class="dp-tool" data-tool="circle" title="Circulo">&#9711;</button>
-          <button class="dp-tool" data-tool="rect"   title="Retangulo">&#9645;</button>
-          <button class="dp-tool" data-tool="track"  title="Rastrear Jogador (IA/OpenCV)">🎯</button>
+          <button class="dp-tool active" data-tool="pencil" data-i18n-title="title-pencil">&#9998;</button>
+          <button class="dp-tool" data-tool="line"   data-i18n-title="title-line">&#9585;</button>
+          <button class="dp-tool" data-tool="dashed" data-i18n-title="title-dashed">- -</button>
+          <button class="dp-tool" data-tool="arrow"  data-i18n-title="title-arrow">&#10145;</button>
+          <button class="dp-tool" data-tool="circle" data-i18n-title="title-circle">&#9711;</button>
+          <button class="dp-tool" data-tool="rect"   data-i18n-title="title-rect">&#9645;</button>
+          <button class="dp-tool" data-tool="track"  data-i18n-title="title-track">🎯</button>
         </div>
         <div class="dp-sep"></div>
-        <div class="dp-label">Cor</div>
+        <div class="dp-label" data-i18n="dp-color">Cor</div>
         <div class="dp-colors">
           <div class="dp-color active" data-color="#ffffff" style="background:#ffffff"></div>
           <div class="dp-color"        data-color="#ffee33" style="background:#ffee33"></div>
@@ -75,14 +84,14 @@
           <div class="dp-color"        data-color="#111111" style="background:#111111;border-color:#555"></div>
         </div>
         <div class="dp-sep"></div>
-        <div class="dp-label">Espessura</div>
+        <div class="dp-label" data-i18n="dp-width">Espessura</div>
         <div class="dp-widths">
           <button class="dp-width active" data-width="2"><span class="wline" style="height:2px"></span></button>
           <button class="dp-width" data-width="4"><span class="wline" style="height:4px"></span></button>
           <button class="dp-width" data-width="8"><span class="wline" style="height:8px"></span></button>
         </div>
         <div class="dp-sep"></div>
-        <div class="dp-label">Dura&#231;&#227;o</div>
+        <div class="dp-label" data-i18n="dp-duration">Dura&#231;&#227;o</div>
         <div class="dp-durations">
           <button class="dp-dur" data-dur="2">2s</button>
           <button class="dp-dur active" data-dur="4">4s</button>
@@ -91,9 +100,9 @@
         </div>
         <div class="dp-sep"></div>
         <div class="dp-actions">
-          <button class="dp-action" id="btnUndo">&#8617; Desfazer</button>
-          <button class="dp-action" id="btnRedo">&#8618; Refazer</button>
-          <button class="dp-action danger" id="btnClearAll">&#128465; Limpar</button>
+          <button class="dp-action" id="btnUndo" data-i18n="dp-undo">&#8617; Desfazer</button>
+          <button class="dp-action" id="btnRedo" data-i18n="dp-redo">&#8618; Refazer</button>
+          <button class="dp-action danger" id="btnClearAll" data-i18n="dp-clear">&#128465; Limpar</button>
         </div>
       </div>
 
@@ -116,11 +125,11 @@
         <!-- Buttons row -->
         <div class="btn-row">
           <div class="btn-left">
-            <button class="ctrl-btn" id="btnOpen"      title="Abrir ficheiro">&#128194;</button>
-            <button class="ctrl-btn" id="btnPlayPause" title="Play / Pause">&#9654;</button>
-            <button class="ctrl-btn" id="btnStop"      title="Parar">&#9209;</button>
+            <button class="ctrl-btn" id="btnOpen"      data-i18n-title="title-open">&#128194;</button>
+            <button class="ctrl-btn" id="btnPlayPause" data-i18n-title="title-play">&#9654;</button>
+            <button class="ctrl-btn" id="btnStop"      data-i18n-title="title-stop">&#9209;</button>
             <div class="volume-wrap">
-              <button class="ctrl-btn" id="btnMute" title="Mudo">&#128266;</button>
+              <button class="ctrl-btn" id="btnMute" data-i18n-title="title-mute">&#128266;</button>
               <input type="range" id="volumeSlider" min="0" max="1" step="0.02" value="1" />
             </div>
           </div>
@@ -128,17 +137,17 @@
             <span class="filename" id="filenameLabel">&#8212;</span>
           </div>
           <div class="btn-right">
-            <button class="ctrl-btn" id="btnSpeed"      title="Velocidade">1x</button>
+            <button class="ctrl-btn" id="btnSpeed"      data-i18n-title="title-speed">1x</button>
 
             <!-- Clip controls -->
             <div class="clip-sep"></div>
-            <button class="ctrl-btn clip-btn" id="btnClipIn"  title="Marcar inicio do corte (I)">&#9646;I</button>
-            <button class="ctrl-btn clip-btn" id="btnClipOut" title="Marcar fim do corte (O)">O&#9646;</button>
-            <button class="ctrl-btn cut-btn"  id="btnCut"     title="Cortar e guardar (X)" disabled>&#9986;</button>
+            <button class="ctrl-btn clip-btn" id="btnClipIn"  data-i18n-title="title-clipin">&#9646;I</button>
+            <button class="ctrl-btn clip-btn" id="btnClipOut" data-i18n-title="title-clipout">O&#9646;</button>
+            <button class="ctrl-btn cut-btn"  id="btnCut"     data-i18n-title="title-cut" disabled>&#9986;</button>
             <div class="clip-sep"></div>
 
-            <button class="ctrl-btn" id="btnEditMode"   title="Modo de desenho (E)">&#9998;</button>
-            <button class="ctrl-btn" id="btnFullscreen" title="Ecra inteiro">&#9974;</button>
+            <button class="ctrl-btn" id="btnEditMode"   data-i18n-title="title-edit">&#9998;</button>
+            <button class="ctrl-btn" id="btnFullscreen" data-i18n-title="title-fs">&#9974;</button>
           </div>
         </div>
       </div>
@@ -150,28 +159,28 @@
   <div class="modal-overlay" id="licenseModal">
     <div class="modal-card">
       <div class="modal-header">
-        <h3>Licenciamento FieldVision</h3>
+        <h3 data-i18n="modal-title">Licenciamento FieldVision</h3>
         <button class="modal-close" id="btnCloseLicense" title="Fechar">&times;</button>
       </div>
       <div class="modal-body">
         <div class="license-status-section">
-          Estado: <strong class="status-val free" id="statusVal">Versão de Teste (Free)</strong>
+          <span data-i18n="modal-status">Estado: </span><strong class="status-val free" id="statusVal" data-i18n="status-free">Versão de Teste (Free)</strong>
         </div>
         
         <div class="license-input-group" id="licenseInputGroup">
-          <p class="modal-instructions">Introduz a tua chave Pro enviada pelo Lemon Squeezy para remover marcas de água e desbloquear anotações e IA ilimitadas.</p>
-          <input type="text" id="licenseInput" placeholder="Ex: 490A40CB-B120-4993-BEA7-..." />
-          <button class="btn-activate" id="btnActivateLicense">Ativar FieldVision Pro</button>
+          <p class="modal-instructions" data-i18n="modal-inst-free">Introduz a tua chave Pro enviada pelo Lemon Squeezy para remover marcas de água e desbloquear anotações e IA ilimitadas.</p>
+          <input type="text" id="licenseInput" data-i18n-placeholder="license-placeholder" placeholder="Ex: 490A40CB-B120-4993-BEA7-..." />
+          <button class="btn-activate" id="btnActivateLicense" data-i18n="btn-activate">Ativar FieldVision Pro</button>
         </div>
 
         <div class="license-active-group" id="licenseActiveGroup" style="display:none">
-          <p class="modal-instructions">A tua licença Pro está ativa e validada neste computador. Obrigado pelo teu suporte!</p>
+          <p class="modal-instructions" data-i18n="modal-inst-pro">A tua licença Pro está ativa e validada neste computador. Obrigado pelo teu suporte!</p>
           <div class="active-key-display" id="activeKeyDisplay">XXXX-XXXX-XXXX-XXXX</div>
-          <button class="btn-deactivate" id="btnDeactivateLicense">Desativar Licença</button>
+          <button class="btn-deactivate" id="btnDeactivateLicense" data-i18n="btn-deactivate">Desativar Licença</button>
         </div>
         
         <div class="modal-footer-links">
-          Ainda não tens chave? <a href="#" id="buyLicenseLink">Comprar Licença Pro (€29/ano)</a>
+          <span data-i18n="modal-buy-text">Ainda não tens chave? </span><a href="#" id="buyLicenseLink" data-i18n="modal-buy-link">Comprar Licença Pro (€29/ano)</a>
         </div>
       </div>
     </div>
