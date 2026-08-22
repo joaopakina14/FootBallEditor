@@ -1,6 +1,6 @@
 {
     "name":  "football-editor",
-    "version":  "1.0.2",
+    "version":  "1.0.3",
     "description":  "Video player for football analysis",
     "main":  "main.js",
     "scripts":  {
@@ -32,8 +32,8 @@
                                "oneClick":  false,
                                "allowToChangeInstallationDirectory":  true,
                                "createDesktopShortcut":  "always",
-                               "installerIcon": "assets/icon.ico",
-                               "uninstallerIcon": "assets/icon.ico",
+                               "installerIcon":  "assets/icon.ico",
+                               "uninstallerIcon":  "assets/icon.ico",
                                "artifactName":  "FieldVision-Setup-${version}.${ext}"
                            },
                   "files":  [
