@@ -414,15 +414,31 @@ async function doCut() {
   const trackingOverlays = []
   if (trackAnns.length > 0 && vRect) {
     trackAnns.forEach(ann => {
-      // Create spotlight PNG image (120x60)
+      // Calculate average player width in normalized coordinates
+      const avgW = ann.trajectory && ann.trajectory.length > 0
+        ? ann.trajectory.reduce((sum, pt) => sum + pt.w, 0) / ann.trajectory.length
+        : 0.05
+
+      // Calculate radius in video pixels (similar to editor drawing logic)
+      const videoPw = avgW * vRect.videoWidth
+      const rx = Math.max(16, videoPw * 0.8)
+      const ry = rx * 0.45
+
+      const scaleFactor = vRect.videoWidth / vRect.displayWidth
+      const lineWidth = Math.max(3, (ann.width || 2) * scaleFactor)
+      const shadowBlur = 12 * scaleFactor
+
+      // Setup canvas size with safety padding to prevent shadow clipping
+      const padding = Math.ceil(shadowBlur * 2 + 10)
+      const rw = Math.ceil(rx * 2 + padding)
+      const rh = Math.ceil(ry * 2 + padding)
+      const cx = rw / 2
+      const cy = rh / 2
+
       const spotCanvas = document.createElement('canvas')
-      const rw = 120, rh = 60
       spotCanvas.width = rw
       spotCanvas.height = rh
       const sCtx = spotCanvas.getContext('2d')
-
-      const cx = rw / 2, cy = rh / 2
-      const rx = 45, ry = 20
 
       const spotColor = ann.color || '#ffffff'
 
@@ -430,13 +446,13 @@ async function doCut() {
       sCtx.beginPath()
       sCtx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2)
       sCtx.strokeStyle = spotColor
-      sCtx.lineWidth = Math.max(4, ann.width || 2)
+      sCtx.lineWidth = lineWidth
       sCtx.shadowColor = spotColor
-      sCtx.shadowBlur = 14
+      sCtx.shadowBlur = shadowBlur
       sCtx.stroke()
 
       const grad = sCtx.createRadialGradient(cx, cy, 2, cx, cy, rx)
-      grad.addColorStop(0, hexToRgba(spotColor, 0.45))
+      grad.addColorStop(0, hexToRgba(spotColor, 0.42))
       grad.addColorStop(1, hexToRgba(spotColor, 0.0))
       sCtx.fillStyle = grad
       sCtx.fill()
