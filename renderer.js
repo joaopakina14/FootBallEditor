@@ -1211,7 +1211,9 @@ function updateAnnotationBadge() {
 
 // ── Drag & Drop Panel Logic ──────────────────────────────
 function makeDraggable(el) {
-  let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+  let grabOffsetX = 0;
+  let grabOffsetY = 0;
+  let dockedEdge = 'left'; // Mantém o estado persistente do acoplamento (left, right, top, bottom, none)
   
   el.addEventListener('mousedown', dragMouseDown);
 
@@ -1232,9 +1234,21 @@ function makeDraggable(el) {
     
     e.preventDefault();
     
-    // Registar coordenadas iniciais do rato
-    pos3 = e.clientX;
-    pos4 = e.clientY;
+    // Ler as posições calculadas reais antes de desativar o docking CSS para o drag iniciar
+    const currentLeft = el.offsetLeft;
+    const currentTop = el.offsetTop;
+    
+    // Limpar as classes de docking do CSS temporariamente para o arrastamento livre
+    el.classList.remove('dock-left', 'dock-right', 'dock-top', 'dock-bottom');
+    
+    // Colocar a posição calculada atual em inline styles para evitar pulos no início do drag
+    el.style.left = currentLeft + 'px';
+    el.style.top = currentTop + 'px';
+    el.style.bottom = 'auto';
+    el.style.right = 'auto';
+    
+    grabOffsetX = e.clientX - el.offsetLeft;
+    grabOffsetY = e.clientY - el.offsetTop;
     
     document.addEventListener('mouseup', closeDragElement);
     document.addEventListener('mousemove', elementDrag);
@@ -1243,33 +1257,129 @@ function makeDraggable(el) {
   function elementDrag(e) {
     e.preventDefault();
     
-    // Calcular a distância percorrida pelo rato
-    pos1 = pos3 - e.clientX;
-    pos2 = pos4 - e.clientY;
-    pos3 = e.clientX;
-    pos4 = e.clientY;
+    const playerWrap = document.getElementById('playerWrap');
+    const playerRect = playerWrap.getBoundingClientRect();
+    const controlsEl = document.getElementById('controls');
+    const controlsRect = controlsEl.getBoundingClientRect();
     
-    // Novas posições da caixa
-    let newTop = el.offsetTop - pos2;
-    let newLeft = el.offsetLeft - pos1;
+    // Altura útil da área do player (excluindo a barra de controlos do fundo)
+    const activeHeight = controlsRect.top - playerRect.top;
     
-    // Restringir limites ao tamanho da janela (viewport) relativo ao contentor .app
-    const appEl = document.querySelector('.app');
-    const appHeight = appEl ? appEl.offsetHeight : window.innerHeight - 38;
-    const controlsHeight = 88; // Altura da barra de controlo inferior
+    const snapThreshold = 100; // Pixels de distância das bordas para colar
     
-    const minLeft = 12;
-    const maxLeft = window.innerWidth - el.offsetWidth - 12;
+    const mouseX = e.clientX;
+    const mouseY = e.clientY;
     
-    const minTop = 12; // Pequena folga abaixo do cabeçalho
-    const maxTop = appHeight - controlsHeight - el.offsetHeight - 12; // Evita sobrepor à barra de controlo
+    // Converter coordenadas do cursor para o espaço local do playerWrap
+    const localMouseX = mouseX - playerRect.left;
+    const localMouseY = mouseY - playerRect.top;
     
-    newLeft = Math.max(minLeft, Math.min(newLeft, maxLeft));
-    newTop = Math.max(minTop, Math.min(newTop, maxTop));
+    // Zonas de snap ativadas apenas pela coordenada absoluta do cursor do rato no viewport
+    const closeToLeft = mouseX < snapThreshold;
+    const closeToRight = mouseX > window.innerWidth - snapThreshold;
+    const closeToTop = mouseY < playerRect.top + snapThreshold;
+    const closeToBottom = mouseY > controlsRect.top - snapThreshold;
     
-    el.style.top = newTop + "px";
-    el.style.left = newLeft + "px";
-    el.style.transform = "none"; // Remove o translateY(-50%) inicial do CSS para não saltar
+    // Distâncias do cursor do rato às margens correspondentes
+    let distLeft = mouseX;
+    let distRight = window.innerWidth - mouseX;
+    let distTop = mouseY - playerRect.top;
+    let distBottom = controlsRect.top - mouseY;
+    
+    let edges = [
+      { name: 'left', dist: distLeft, active: closeToLeft },
+      { name: 'right', dist: distRight, active: closeToRight },
+      { name: 'top', dist: distTop, active: closeToTop },
+      { name: 'bottom', dist: distBottom, active: closeToBottom }
+    ];
+    
+    // Obter apenas as bordas ativas de snap e ordenar pela mais próxima do rato
+    let activeSnaps = edges.filter(ed => ed.active).sort((a, b) => a.dist - b.dist);
+    
+    if (activeSnaps.length > 0) {
+      const targetEdge = activeSnaps[0].name;
+      dockedEdge = targetEdge; // Guardar estado da doca atualizado
+      
+      // Aplicar classes CSS e remover inline-styles concorrentes
+      el.classList.remove('dock-left', 'dock-right', 'dock-top', 'dock-bottom');
+      el.classList.add('dock-' + targetEdge);
+      
+      if (targetEdge === 'left') {
+        if (el.classList.contains('horizontal')) {
+          el.classList.remove('horizontal');
+          const dummy = el.offsetWidth; // Forçar reflow
+          grabOffsetX = el.offsetWidth / 2;
+          grabOffsetY = el.offsetHeight / 2;
+        }
+        el.style.left = '';
+        el.style.right = '';
+        el.style.bottom = '';
+        let maxTop = activeHeight - el.offsetHeight;
+        el.style.top = Math.max(0, Math.min(localMouseY - grabOffsetY, maxTop)) + 'px';
+      } 
+      else if (targetEdge === 'right') {
+        if (el.classList.contains('horizontal')) {
+          el.classList.remove('horizontal');
+          const dummy = el.offsetWidth;
+          grabOffsetX = el.offsetWidth / 2;
+          grabOffsetY = el.offsetHeight / 2;
+        }
+        el.style.left = '';
+        el.style.right = '';
+        el.style.bottom = '';
+        let maxTop = activeHeight - el.offsetHeight;
+        el.style.top = Math.max(0, Math.min(localMouseY - grabOffsetY, maxTop)) + 'px';
+      } 
+      else if (targetEdge === 'top') {
+        if (!el.classList.contains('horizontal')) {
+          el.classList.add('horizontal');
+          const dummy = el.offsetWidth;
+          grabOffsetX = el.offsetWidth / 2;
+          grabOffsetY = el.offsetHeight / 2;
+        }
+        // Limpar estilos inline: a classe CSS (.dock-top) posiciona tudo nativamente!
+        el.style.left = '';
+        el.style.right = '';
+        el.style.top = '';
+        el.style.bottom = '';
+      } 
+      else if (targetEdge === 'bottom') {
+        if (!el.classList.contains('horizontal')) {
+          el.classList.add('horizontal');
+          const dummy = el.offsetHeight;
+          grabOffsetX = el.offsetWidth / 2;
+          grabOffsetY = el.offsetHeight / 2;
+        }
+        // Limpar estilos inline: a classe CSS (.dock-bottom) posiciona tudo nativamente!
+        el.style.left = '';
+        el.style.right = '';
+        el.style.top = '';
+        el.style.bottom = '';
+      }
+    } else {
+      // ── FLUTUAÇÃO LIVRE NO MEIO ──
+      dockedEdge = 'none'; // Desacoplado
+      el.classList.remove('dock-left', 'dock-right', 'dock-top', 'dock-bottom');
+      
+      if (el.classList.contains('horizontal')) {
+        el.classList.remove('horizontal');
+        const dummy = el.offsetWidth;
+        grabOffsetX = el.offsetWidth / 2;
+        grabOffsetY = el.offsetHeight / 2;
+      }
+      
+      const maxLeft = playerRect.width - el.offsetWidth;
+      const maxTop = activeHeight - el.offsetHeight;
+      
+      let targetLeft = localMouseX - grabOffsetX;
+      let targetTop = localMouseY - grabOffsetY;
+      
+      el.style.left = Math.max(0, Math.min(targetLeft, maxLeft)) + "px";
+      el.style.top = Math.max(0, Math.min(targetTop, maxTop)) + "px";
+      el.style.bottom = 'auto';
+      el.style.right = 'auto';
+    }
+    el.style.transform = "none";
   }
 
   function closeDragElement() {
@@ -1277,26 +1387,64 @@ function makeDraggable(el) {
     document.removeEventListener('mousemove', elementDrag);
   }
 
-  // Garantir que a caixa se ajusta quando a janela muda de tamanho (evita ficar cortada)
+  // Garantir que a caixa se ajusta e se mantém colada à beira correta quando a janela muda de tamanho
   window.addEventListener('resize', () => {
-    if (!el.style.left) return;
+    if (el.style.display === 'none') return;
     
-    const appEl = document.querySelector('.app');
-    const appHeight = appEl ? appEl.offsetHeight : window.innerHeight - 38;
-    const controlsHeight = 88;
+    const playerWrap = document.getElementById('playerWrap');
+    if (!playerWrap || playerWrap.style.display === 'none') return;
     
-    let currentTop = parseFloat(el.style.top);
-    let currentLeft = parseFloat(el.style.left);
+    const playerRect = playerWrap.getBoundingClientRect();
+    const controlsEl = document.getElementById('controls');
+    const controlsRect = controlsEl.getBoundingClientRect();
     
-    const minLeft = 12;
-    const maxLeft = window.innerWidth - el.offsetWidth - 12;
-    const minTop = 12;
-    const maxTop = appHeight - controlsHeight - el.offsetHeight - 12;
+    const activeHeight = controlsRect.top - playerRect.top;
     
-    if (currentTop > maxTop) { el.style.top = Math.max(minTop, maxTop) + "px"; }
-    if (currentTop < minTop) { el.style.top = minTop + "px"; }
-    if (currentLeft > maxLeft) { el.style.left = Math.max(minLeft, maxLeft) + "px"; }
-    if (currentLeft < minLeft) { el.style.left = minLeft + "px"; }
+    const maxLeft = playerRect.width - el.offsetWidth;
+    const maxTop = activeHeight - el.offsetHeight;
+    
+    el.classList.remove('dock-left', 'dock-right', 'dock-top', 'dock-bottom');
+    
+    if (dockedEdge === 'left') {
+      el.classList.remove('horizontal');
+      el.classList.add('dock-left');
+      el.style.left = '';
+      el.style.right = '';
+      el.style.bottom = '';
+      el.style.top = Math.max(0, Math.min(el.offsetTop, maxTop)) + 'px';
+    } 
+    else if (dockedEdge === 'right') {
+      el.classList.remove('horizontal');
+      el.classList.add('dock-right');
+      el.style.left = '';
+      el.style.right = '';
+      el.style.bottom = '';
+      el.style.top = Math.max(0, Math.min(el.offsetTop, maxTop)) + 'px';
+    } 
+    else if (dockedEdge === 'top') {
+      el.classList.add('horizontal');
+      el.classList.add('dock-top');
+      el.style.left = '';
+      el.style.right = '';
+      el.style.top = '';
+      el.style.bottom = '';
+    } 
+    else if (dockedEdge === 'bottom') {
+      el.classList.add('horizontal');
+      el.classList.add('dock-bottom');
+      el.style.left = '';
+      el.style.right = '';
+      el.style.top = '';
+      el.style.bottom = '';
+    } 
+    else {
+      // Modo flutuante: apenas manter nos limites do ecrã
+      el.classList.remove('horizontal');
+      el.style.left = Math.max(0, Math.min(el.offsetLeft, maxLeft)) + 'px';
+      el.style.top = Math.max(0, Math.min(el.offsetTop, maxTop)) + 'px';
+      el.style.bottom = 'auto';
+      el.style.right = 'auto';
+    }
   });
 }
 

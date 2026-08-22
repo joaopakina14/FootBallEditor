@@ -111,12 +111,12 @@ video { flex: 1; width: 100%; height: calc(100% - var(--bar-h)); object-fit: con
   max-height: calc(100vh - 90px);
   overflow-y: auto;
   overflow-x: hidden;
-  background: rgba(13,13,20,0.92);
+  background: rgba(13,13,20,0.95);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
   border: 1px solid rgba(255,255,255,0.11);
   border-radius: 14px;
-  padding: 10px 7px;
+  padding: 12px 7px;
   display: none;
   flex-direction: column;
   align-items: center;
@@ -129,8 +129,9 @@ video { flex: 1; width: 100%; height: calc(100% - var(--bar-h)); object-fit: con
 .draw-panel::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 3px; }
 
 .draw-panel.visible { position: absolute; display: flex; animation: slideInLeft 0.22s cubic-bezier(0.34, 1.56, 0.64, 1); }
-.dp-label { font-size: 8px; font-weight: 700; letter-spacing: 0.2px; text-transform: uppercase; color: var(--muted); width: 100%; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.dp-sep { width: 80%; height: 1px; background: var(--border); margin: 2px 0; }
+.dp-label { font-size: 10px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; color: var(--muted); width: 100%; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin: 6px 0 4px; }
+.dp-label:first-of-type { margin-top: 0; }
+.dp-sep { width: 80%; height: 1px; background: var(--border); margin: 3px 0; }
 .dp-tools-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; width: 100%; }
 .dp-tool { width: 100%; aspect-ratio: 1; border-radius: 8px; font-size: 14px; background: var(--ctrl-bg); color: var(--text); transition: background 0.15s, transform 0.1s, box-shadow 0.15s; display: flex; align-items: center; justify-content: center; }
 .dp-tool:hover { background: var(--ctrl-hover); transform: scale(1.06); }
@@ -149,9 +150,117 @@ video { flex: 1; width: 100%; height: calc(100% - var(--bar-h)); object-fit: con
 .dp-dur:hover { background: var(--ctrl-hover); color: var(--text); }
 .dp-dur.active { background: linear-gradient(135deg, var(--accent), var(--accent2)); color: white; }
 .dp-actions { display: flex; flex-direction: column; gap: 3px; width: 100%; }
-.dp-action { width: 100%; padding: 5px 4px; border-radius: 7px; font-size: 10px; font-weight: 500; background: var(--ctrl-bg); color: var(--text); transition: background 0.15s, transform 0.1s; text-align: center; }
+.dp-action { width: 100%; padding: 6px 4px; border-radius: 7px; font-size: 11px; font-weight: 500; background: var(--ctrl-bg); color: var(--text); transition: background 0.15s, transform 0.1s; text-align: center; }
 .dp-action:hover { background: var(--ctrl-hover); transform: scale(1.03); }
 .dp-action.danger:hover { background: rgba(192,57,43,0.4); color: #ff6b6b; }
+
+/* ── ESTILOS HORIZONTAIS DO PAINEL (DOCKING ADAPTATIVO) ── */
+.draw-panel.horizontal {
+  flex-direction: row;
+  width: auto;
+  height: 62px;
+  max-height: none;
+  max-width: calc(100vw - 24px);
+  padding: 6px 14px;
+  gap: 8px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  justify-content: flex-start;
+  border-radius: 12px;
+}
+.draw-panel.horizontal::-webkit-scrollbar { height: 3px; }
+.draw-panel.horizontal::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 3px; }
+
+.draw-panel.horizontal .dp-label {
+  font-size: 9px;
+  width: auto;
+  margin: 0;
+  text-align: left;
+}
+.draw-panel.horizontal .dp-sep {
+  width: 1px;
+  height: 28px;
+  margin: 0 4px;
+}
+.draw-panel.horizontal .dp-tools-grid {
+  display: flex;
+  flex-direction: row;
+  gap: 3px;
+  width: auto;
+}
+.draw-panel.horizontal .dp-tool {
+  width: 28px;
+  height: 28px;
+  font-size: 13px;
+}
+.draw-panel.horizontal .dp-colors {
+  display: flex;
+  flex-direction: row;
+  gap: 4px;
+  width: auto;
+}
+.draw-panel.horizontal .dp-color {
+  width: 22px;
+  height: 22px;
+}
+.draw-panel.horizontal .dp-widths {
+  display: flex;
+  flex-direction: row;
+  gap: 3px;
+  width: auto;
+}
+.draw-panel.horizontal .dp-width {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+}
+.draw-panel.horizontal .wline {
+  width: 16px;
+}
+.draw-panel.horizontal .dp-durations {
+  display: flex;
+  flex-direction: row;
+  gap: 3px;
+  width: auto;
+}
+.draw-panel.horizontal .dp-dur {
+  width: 28px;
+  height: 28px;
+  font-size: 10px;
+}
+.draw-panel.horizontal .dp-actions {
+  display: flex;
+  flex-direction: row;
+  gap: 3px;
+  width: auto;
+}
+.draw-panel.horizontal .dp-action {
+  width: 66px;
+  padding: 6px 2px;
+  font-size: 10px;
+}
+
+/* Classes de Docking Persistente (Pure CSS para evitar race conditions no resize) */
+.draw-panel.dock-left {
+  left: 0 !important;
+  transform: none !important;
+}
+.draw-panel.dock-right {
+  left: auto !important;
+  right: 0 !important;
+  transform: none !important;
+}
+.draw-panel.dock-top {
+  top: 0 !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+}
+.draw-panel.dock-bottom {
+  top: auto !important;
+  bottom: var(--bar-h) !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+}
 
 /* =========================================
    CONTROLS BAR
