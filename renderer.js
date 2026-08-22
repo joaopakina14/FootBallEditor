@@ -1,6 +1,10 @@
 const { ipcRenderer } = require('electron')
 const path = require('path')
 
+// ── Licensing state ───────────────────────────────────────
+let isPro = false
+let trackingTrialCount = parseInt(localStorage.getItem('trackingTrialCount') || '0')
+
 // ── Elements ──────────────────────────────────────────────
 const video         = document.getElementById('video')
 const emptyState    = document.getElementById('emptyState')
@@ -29,6 +33,104 @@ const clipZone      = document.getElementById('clipZone')
 const clipInMarker  = document.getElementById('clipInMarker')
 const clipOutMarker = document.getElementById('clipOutMarker')
 const toast         = document.getElementById('toast')
+
+// License UI elements
+const licenseBadge        = document.getElementById('licenseBadge')
+const licenseModal        = document.getElementById('licenseModal')
+const btnCloseLicense     = document.getElementById('btnCloseLicense')
+const btnActivateLicense  = document.getElementById('btnActivateLicense')
+const btnDeactivateLicense= document.getElementById('btnDeactivateLicense')
+const licenseInput        = document.getElementById('licenseInput')
+const statusVal           = document.getElementById('statusVal')
+const licenseInputGroup   = document.getElementById('licenseInputGroup')
+const licenseActiveGroup  = document.getElementById('licenseActiveGroup')
+const activeKeyDisplay    = document.getElementById('activeKeyDisplay')
+const buyLicenseLink      = document.getElementById('buyLicenseLink')
+
+// ── Licensing Logic ───────────────────────────────────────
+function updateLicenseUI(status, key) {
+  isPro = (status === 'pro');
+  
+  if (isPro) {
+    licenseBadge.textContent = 'Pro Ativo ✓';
+    licenseBadge.className = 'license-badge pro';
+    statusVal.textContent = 'Versão Pro (Ativa)';
+    statusVal.className = 'status-val pro';
+    
+    licenseInputGroup.style.display = 'none';
+    licenseActiveGroup.style.display = 'block';
+    
+    const maskedKey = key ? `XXXX-XXXX-XXXX-${key.slice(-4)}` : 'Ativa';
+    activeKeyDisplay.textContent = maskedKey;
+  } else {
+    licenseBadge.textContent = 'Ativar Pro ⚡';
+    licenseBadge.className = 'license-badge free';
+    statusVal.textContent = 'Versão de Teste (Free)';
+    statusVal.className = 'status-val free';
+    
+    licenseInputGroup.style.display = 'block';
+    licenseActiveGroup.style.display = 'none';
+    licenseInput.value = '';
+  }
+}
+
+async function checkLicense() {
+  const res = await ipcRenderer.invoke('check-license');
+  updateLicenseUI(res.status, res.licenseKey);
+}
+
+// Event Listeners for License modal
+licenseBadge.addEventListener('click', () => {
+  checkLicense();
+  licenseModal.classList.add('open');
+});
+
+btnCloseLicense.addEventListener('click', () => {
+  licenseModal.classList.remove('open');
+});
+
+buyLicenseLink.addEventListener('click', (e) => {
+  e.preventDefault();
+  const { shell } = require('electron');
+  shell.openExternal('https://joaopakina14.github.io/FieldVision/');
+});
+
+btnActivateLicense.addEventListener('click', async () => {
+  const key = licenseInput.value.trim();
+  if (!key) {
+    showToast('⚠️ Introduz uma chave de licença!', 3000);
+    return;
+  }
+  
+  showToast('🔑 A verificar chave...', 0);
+  btnActivateLicense.disabled = true;
+  
+  const res = await ipcRenderer.invoke('activate-license', key);
+  btnActivateLicense.disabled = false;
+  
+  if (res.success) {
+    showToast('✅ FieldVision Pro ativado com sucesso!', 4000);
+    checkLicense();
+    licenseModal.classList.remove('open');
+  } else {
+    showToast('❌ ' + res.error, 4000);
+  }
+});
+
+btnDeactivateLicense.addEventListener('click', async () => {
+  if (confirm('Tem a certeza que deseja desativar a licença neste computador?')) {
+    showToast('🔒 A remover licença...', 0);
+    const res = await ipcRenderer.invoke('deactivate-license');
+    if (res.success) {
+      showToast('ℹ️ Licença desativada.', 3000);
+      checkLicense();
+      licenseModal.classList.remove('open');
+    } else {
+      showToast('❌ ' + res.error, 3000);
+    }
+  }
+});
+
 
 // Titlebar
 document.getElementById('btn-minimize').addEventListener('click', () => ipcRenderer.send('window-minimize'))
@@ -353,6 +455,23 @@ function getVideoVisualRect() {
 async function doCut() {
   if (!clip.inputPath || clip.inTime === null || clip.outTime === null) return
 
+  // Check monthly export limit for Free users
+  if (!isPro) {
+    let exportsLog = [];
+    try {
+      exportsLog = JSON.parse(localStorage.getItem('exportsLog') || '[]');
+    } catch(e){}
+    
+    // Filter timestamps within last 30 days
+    const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000);
+    exportsLog = exportsLog.filter(ts => ts > thirtyDaysAgo);
+    
+    if (exportsLog.length >= 3) {
+      showToast('⚠️ Limite Free: Atingiste o limite de 3 exportações mensais. Compra o Pro para exportações ilimitadas!', 5500);
+      return;
+    }
+  }
+
   const startTime = Math.min(clip.inTime, clip.outTime)
   const endTime   = Math.max(clip.inTime, clip.outTime)
   const duration  = endTime - startTime
@@ -377,7 +496,10 @@ async function doCut() {
   let overlaySequencePath = null
   let totalOverlaysCount = targetAnns.length
 
-  if (totalOverlaysCount > 0 && vRect) {
+  // Force image sequence generation if we need to burn watermark even if no annotations exist!
+  const needsProcessing = totalOverlaysCount > 0 || !isPro
+
+  if (needsProcessing && vRect) {
     const os = require('os')
     const fs = require('fs')
 
@@ -416,6 +538,17 @@ async function doCut() {
 
       offCtx.restore()
 
+      // ★ Draw watermark for Free Version (drawn relative to actual output resolution)
+      if (!isPro) {
+        offCtx.save()
+        offCtx.fillStyle = 'rgba(255, 255, 255, 0.45)'
+        offCtx.font = 'bold 20px sans-serif'
+        offCtx.shadowColor = 'rgba(0,0,0,0.6)'
+        offCtx.shadowBlur = 4
+        offCtx.fillText('Criado com FieldVision Free', 30, offscreen.height - 30)
+        offCtx.restore()
+      }
+
       const dataUrl = offscreen.toDataURL('image/png')
       const base64Data = dataUrl.replace(/^data:image\/png;base64,/, "")
       const framePath = path.join(tempDir, `frame_${String(f).padStart(4, '0')}.png`)
@@ -424,8 +557,8 @@ async function doCut() {
   }
 
   btnCut.disabled = true; btnCut.classList.remove('ready')
-  const statusMsg = totalOverlaysCount > 0
-    ? `\u2702\uFE0F A processar e gravar ${totalOverlaysCount} elemento(s) no v\u00EDdeo...`
+  const statusMsg = needsProcessing
+    ? `\u2702\uFE0F A processar e gravar elementos no vídeo...`
     : '\u2702\uFE0F A cortar...'
   showToast(statusMsg, 0)
 
@@ -434,6 +567,16 @@ async function doCut() {
   })
 
   if (result.success) {
+    // Log export for Free users
+    if (!isPro) {
+      let exportsLog = [];
+      try {
+        exportsLog = JSON.parse(localStorage.getItem('exportsLog') || '[]');
+      } catch(e){}
+      exportsLog.push(Date.now());
+      localStorage.setItem('exportsLog', JSON.stringify(exportsLog));
+    }
+
     const filename = path.basename(result.outputPath)
     const annInfo  = totalOverlaysCount > 0 ? ` + ${totalOverlaysCount} elemento(s) gravado(s)!` : ''
     showToast(`\u2705 ${filename}${annInfo}`, 6000, result.outputPath)
@@ -654,6 +797,14 @@ canvas.addEventListener('mouseup', async e => {
       // Handle Player Tracker tool via OpenCV
       const vRect = getVideoVisualRect()
       if (vRect && clip.inputPath) {
+        // Enforce 5-use limit on Free version
+        if (!isPro && trackingTrialCount >= 5) {
+          showToast('⚠️ Limite Trial: Já utilizou o rastreio automático 5 vezes. Adquira a licença Pro para uso ilimitado!', 5500);
+          ds.current = null;
+          redraw();
+          return;
+        }
+
         const x1 = Math.min(ann.x1, ann.x2)
         const y1 = Math.min(ann.y1, ann.y2)
         const w  = Math.abs(ann.x2 - ann.x1)
@@ -666,9 +817,15 @@ canvas.addEventListener('mouseup', async e => {
 
         // If infinite (duration = -1), track continuously until player exits camera or video ends
         const remainingVidTime = (video.duration || 9999) - (video.currentTime || 0)
-        const trackDuration = ds.duration === -1 ? Math.max(60.0, remainingVidTime) : ds.duration
+        let trackDuration = ds.duration === -1 ? Math.max(60.0, remainingVidTime) : ds.duration
 
-        showToast('\uD83C\uDFAF A analisar e fixar movimento no jogador...', 0)
+        // Enforce 2-second limit on Free version
+        if (!isPro) {
+          trackDuration = Math.min(trackDuration, 2.0);
+          showToast('🎯 Rastreio Free limitado a 2 segundos de clipe...', 0);
+        } else {
+          showToast('\uD83C\uDFAF A analisar e fixar movimento no jogador...', 0);
+        }
 
         const result = await ipcRenderer.invoke('track-player', {
           videoPath: clip.inputPath,
@@ -678,6 +835,12 @@ canvas.addEventListener('mouseup', async e => {
         })
 
         if (result && result.success && result.trajectory && result.trajectory.length > 0) {
+          // Increment tracking counter if Free
+          if (!isPro) {
+            trackingTrialCount++;
+            localStorage.setItem('trackingTrialCount', trackingTrialCount.toString());
+          }
+
           ann.timestamp  = video.currentTime || 0
           const maxValidDur = result.trajectory[result.trajectory.length - 1].time
           ann.duration   = Math.min(trackDuration, maxValidDur > 0 ? maxValidDur : trackDuration)
@@ -686,12 +849,25 @@ canvas.addEventListener('mouseup', async e => {
           updateTimelineMarkers()
           updateAnnotationBadge()
           scheduleAnnotationSave()
-          showToast(`\u2705 Rastreio conclu\u00EDdo: ${result.totalPoints} pontos gravados!`, 3500)
+          
+          if (!isPro) {
+            showToast(`✅ Rastreio concluído (Teste ${trackingTrialCount} de 5). Adquire o Pro!`, 5000);
+          } else {
+            showToast(`\u2705 Rastreio concluído: ${result.totalPoints} pontos gravados!`, 3500);
+          }
         } else {
           showToast(`\u274C Falha no rastreio: ${result.error || 'Não foi possível seguir o jogador'}`, 4000)
         }
       }
     } else {
+      // Enforce max 3 annotations limit on Free version
+      if (!isPro && ds.annotations.length >= 3) {
+        showToast('⚠️ Limite Free: Máximo de 3 anotações por vídeo atingido. Adquire o Pro para anotações ilimitadas!', 5500);
+        ds.current = null;
+        redraw();
+        return;
+      }
+
       ann.timestamp = video.currentTime || 0; ann.duration = ds.duration
 
       // ★ Check Dual Attachment for ANY tool (Lines, Arrows, Circles, Rects & Freehand Pencil Curves)
@@ -740,6 +916,15 @@ canvas.addEventListener('mouseup', async e => {
 })
 canvas.addEventListener('mouseleave', () => {
   if (ds.drawing && ds.current && ds.tool === 'pencil' && ds.current.points.length > 1) {
+    // Enforce max 3 annotations limit on Free version
+    if (!isPro && ds.annotations.length >= 3) {
+      showToast('⚠️ Limite Free: Máximo de 3 anotações por vídeo atingido.', 4500);
+      ds.current = null;
+      ds.drawing = false;
+      redraw();
+      return;
+    }
+
     ds.current.timestamp = video.currentTime || 0; ds.current.duration = ds.duration
     ds.annotations.push(ds.current); ds.current = null; ds.drawing = false
     redraw(); updateTimelineMarkers(); updateAnnotationBadge()
@@ -1017,3 +1202,7 @@ function updateAnnotationBadge() {
   if (count > 0) { btnEditMode.dataset.count = count; btnEditMode.title = `Modo de desenho (E) \u2014 ${count} anota\u00E7\u00E3o(oes)` }
   else { delete btnEditMode.dataset.count; btnEditMode.title = 'Modo de desenho (E)' }
 }
+
+// Initial license validation check on boot
+checkLicense();
+

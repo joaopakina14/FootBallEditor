@@ -162,6 +162,137 @@ function createWindow() {
       })
     })
   })
+
+  // ── License Management (Lemon Squeezy Integration) ──────────────────
+  const licensePath = path.join(app.getPath('userData'), 'license.json')
+
+  ipcMain.handle('check-license', async () => {
+    try {
+      if (!fs.existsSync(licensePath)) {
+        return { status: 'free' }
+      }
+      const data = JSON.parse(fs.readFileSync(licensePath, 'utf8'))
+      if (!data.licenseKey) {
+        return { status: 'free' }
+      }
+
+      // Check online with Lemon Squeezy validation endpoint
+      const res = await postJSON('https://api.lemonsqueezy.com/v1/licenses/validate', {
+        license_key: data.licenseKey,
+        instance_id: data.instanceId
+      })
+
+      if (res.valid && res.license_key && res.license_key.status === 'active') {
+        return { status: 'pro', licenseKey: data.licenseKey }
+      } else {
+        // License key is no longer active/valid, remove file
+        try { fs.unlinkSync(licensePath) } catch(e){}
+        return { status: 'free' }
+      }
+    } catch (err) {
+      console.warn('Licensing check offline mode fallback:', err.message)
+      // Offline fallback: if server is down or no internet, trust the locally stored active license
+      if (fs.existsSync(licensePath)) {
+        try {
+          const data = JSON.parse(fs.readFileSync(licensePath, 'utf8'))
+          if (data.licenseKey) {
+            return { status: 'pro', licenseKey: data.licenseKey, offline: true }
+          }
+        } catch(e){}
+      }
+      return { status: 'free' }
+    }
+  })
+
+  ipcMain.handle('activate-license', async (event, licenseKey) => {
+    try {
+      const os = require('os')
+      const instanceName = `${os.hostname()} - ${os.platform()}`
+
+      const res = await postJSON('https://api.lemonsqueezy.com/v1/licenses/activate', {
+        license_key: licenseKey,
+        instance_name: instanceName
+      })
+
+      if (res.activated) {
+        fs.writeFileSync(licensePath, JSON.stringify({
+          licenseKey: licenseKey,
+          instanceId: res.instance.id,
+          instanceName: instanceName,
+          activatedAt: Date.now()
+        }, null, 2), 'utf8')
+
+        return { success: true }
+      } else {
+        return { success: false, error: res.error || 'Falha ao ativar a licença. Verifica se a chave está correta.' }
+      }
+    } catch (err) {
+      console.error('activate-license error:', err)
+      return { success: false, error: 'Erro de rede. Verifica a tua ligação à Internet.' }
+    }
+  })
+
+  ipcMain.handle('deactivate-license', async () => {
+    try {
+      if (fs.existsSync(licensePath)) {
+        const data = JSON.parse(fs.readFileSync(licensePath, 'utf8'))
+        
+        // Try deactivation online (silently ignore network errors)
+        try {
+          await postJSON('https://api.lemonsqueezy.com/v1/licenses/deactivate', {
+            license_key: data.licenseKey,
+            instance_id: data.instanceId
+          })
+        } catch (e) {
+          console.warn('Could not deactivate online, unlinking locally anyway:', e.message)
+        }
+
+        fs.unlinkSync(licensePath)
+      }
+      return { success: true }
+    } catch (err) {
+      console.error('deactivate-license error:', err)
+      return { success: false, error: err.message }
+    }
+  })
+}
+
+// ── Native HTTPS POST Helper (JSON) ──────────────────────────────────
+function postJSON(url, data) {
+  return new Promise((resolve, reject) => {
+    const { URL } = require('url')
+    const https = require('https')
+    
+    const urlObj = new URL(url)
+    const body = JSON.stringify(data)
+    const options = {
+      hostname: urlObj.hostname,
+      port: 443,
+      path: urlObj.pathname,
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(body)
+      }
+    }
+
+    const req = https.request(options, (res) => {
+      let responseBody = ''
+      res.on('data', (chunk) => { responseBody += chunk })
+      res.on('end', () => {
+        try {
+          resolve(JSON.parse(responseBody))
+        } catch (e) {
+          reject(new Error('Invalid JSON response: ' + responseBody))
+        }
+      })
+    })
+
+    req.on('error', (err) => { reject(err) })
+    req.write(body)
+    req.end()
+  })
 }
 
 app.whenReady().then(createWindow)
@@ -173,3 +304,4 @@ app.on('window-all-closed', () => {
 app.on('activate', () => {
   if (BrowserWindow.getAllWindows().length === 0) createWindow()
 })
+

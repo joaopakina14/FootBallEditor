@@ -12,8 +12,9 @@
 
   <div class="titlebar" id="titlebar">
     <div class="titlebar-drag">
-      <span class="app-logo">&#9917;</span>
-      <span class="app-title">FootBall Editor</span>
+      <img src="assets/icon.png" class="app-logo-img" alt="FieldVision Logo" />
+      <span class="app-title">FieldVision</span>
+      <button class="license-badge free" id="licenseBadge" title="Ativar FieldVision Pro">Ativar Pro ⚡</button>
     </div>
     <div class="titlebar-controls">
       <button class="tb-btn" id="btn-minimize" title="Minimizar">&#8211;</button>
@@ -143,6 +144,37 @@
         </div>
       </div>
 
+    </div>
+  </div>
+
+  <!-- Modal de Licenciamento -->
+  <div class="modal-overlay" id="licenseModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Licenciamento FieldVision</h3>
+        <button class="modal-close" id="btnCloseLicense" title="Fechar">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="license-status-section">
+          Estado: <strong class="status-val free" id="statusVal">Versão de Teste (Free)</strong>
+        </div>
+        
+        <div class="license-input-group" id="licenseInputGroup">
+          <p class="modal-instructions">Introduz a tua chave Pro enviada pelo Lemon Squeezy para remover marcas de água e desbloquear anotações e IA ilimitadas.</p>
+          <input type="text" id="licenseInput" placeholder="Ex: 490A40CB-B120-4993-BEA7-..." />
+          <button class="btn-activate" id="btnActivateLicense">Ativar FieldVision Pro</button>
+        </div>
+
+        <div class="license-active-group" id="licenseActiveGroup" style="display:none">
+          <p class="modal-instructions">A tua licença Pro está ativa e validada neste computador. Obrigado pelo teu suporte!</p>
+          <div class="active-key-display" id="activeKeyDisplay">XXXX-XXXX-XXXX-XXXX</div>
+          <button class="btn-deactivate" id="btnDeactivateLicense">Desativar Licença</button>
+        </div>
+        
+        <div class="modal-footer-links">
+          Ainda não tens chave? <a href="#" id="buyLicenseLink">Comprar Licença Pro (€29/ano)</a>
+        </div>
+      </div>
     </div>
   </div>
 
