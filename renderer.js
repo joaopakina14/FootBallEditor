@@ -1253,12 +1253,19 @@ function makeDraggable(el) {
     let newTop = el.offsetTop - pos2;
     let newLeft = el.offsetLeft - pos1;
     
-    // Restringir limites ao tamanho da janela (viewport)
-    const maxLeft = window.innerWidth - el.offsetWidth;
-    const maxTop = window.innerHeight - el.offsetHeight;
+    // Restringir limites ao tamanho da janela (viewport) relativo ao contentor .app
+    const appEl = document.querySelector('.app');
+    const appHeight = appEl ? appEl.offsetHeight : window.innerHeight - 38;
+    const controlsHeight = 88; // Altura da barra de controlo inferior
     
-    newLeft = Math.max(0, Math.min(newLeft, maxLeft));
-    newTop = Math.max(38, Math.min(newTop, maxTop)); // 38px de margem superior para o cabeçalho
+    const minLeft = 12;
+    const maxLeft = window.innerWidth - el.offsetWidth - 12;
+    
+    const minTop = 12; // Pequena folga abaixo do cabeçalho
+    const maxTop = appHeight - controlsHeight - el.offsetHeight - 12; // Evita sobrepor à barra de controlo
+    
+    newLeft = Math.max(minLeft, Math.min(newLeft, maxLeft));
+    newTop = Math.max(minTop, Math.min(newTop, maxTop));
     
     el.style.top = newTop + "px";
     el.style.left = newLeft + "px";
@@ -1269,6 +1276,28 @@ function makeDraggable(el) {
     document.removeEventListener('mouseup', closeDragElement);
     document.removeEventListener('mousemove', elementDrag);
   }
+
+  // Garantir que a caixa se ajusta quando a janela muda de tamanho (evita ficar cortada)
+  window.addEventListener('resize', () => {
+    if (!el.style.left) return;
+    
+    const appEl = document.querySelector('.app');
+    const appHeight = appEl ? appEl.offsetHeight : window.innerHeight - 38;
+    const controlsHeight = 88;
+    
+    let currentTop = parseFloat(el.style.top);
+    let currentLeft = parseFloat(el.style.left);
+    
+    const minLeft = 12;
+    const maxLeft = window.innerWidth - el.offsetWidth - 12;
+    const minTop = 12;
+    const maxTop = appHeight - controlsHeight - el.offsetHeight - 12;
+    
+    if (currentTop > maxTop) { el.style.top = Math.max(minTop, maxTop) + "px"; }
+    if (currentTop < minTop) { el.style.top = minTop + "px"; }
+    if (currentLeft > maxLeft) { el.style.left = Math.max(minLeft, maxLeft) + "px"; }
+    if (currentLeft < minLeft) { el.style.left = minLeft + "px"; }
+  });
 }
 
 // Inicializar arrastamento no painel
