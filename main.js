@@ -48,63 +48,21 @@ function createWindow() {
   })
 
   // ── Cut video with optional burn-in overlays (FFmpeg) ──────────────────
-  ipcMain.handle('cut-video', async (event, { inputPath, startTime, duration, outputPath, overlayImages, trackingOverlays }) => {
+  ipcMain.handle('cut-video', async (event, { inputPath, startTime, duration, outputPath, overlaySequencePath }) => {
     return new Promise((resolve) => {
       let command = ffmpeg(inputPath)
         .setFfmpegPath(ffmpegStatic)
         .setStartTime(startTime)
         .setDuration(duration)
 
-      const hasStatic = overlayImages && overlayImages.length > 0
-      const hasTracking = trackingOverlays && trackingOverlays.length > 0
+      const hasSequence = !!overlaySequencePath
 
-      if (hasStatic || hasTracking) {
-        const tempDir = path.join(app.getPath('temp'), 'football_editor_overlays')
-        if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true })
-
-        let filterComplex = ''
-        let lastStream = '0:v'
-        let inputIdx = 1
-
-        // 1. Process static overlays (pencil, lines, arrows, etc.)
-        if (hasStatic) {
-          overlayImages.forEach((ov) => {
-            const imgFileName = `overlay_static_${Date.now()}_${inputIdx}.png`
-            const imgPath = path.join(tempDir, imgFileName)
-            const base64Data = ov.dataUrl.replace(/^data:image\/png;base64,/, "")
-            fs.writeFileSync(imgPath, base64Data, 'base64')
-
-            command.input(imgPath)
-            const enableCond = `between(t,${ov.startTime.toFixed(2)},${ov.endTime.toFixed(2)})`
-            const nextStream = `v${inputIdx}`
-            filterComplex += `[${lastStream}][${inputIdx}:v]overlay=0:0:enable='${enableCond}'[${nextStream}];`
-            lastStream = nextStream
-            inputIdx++
-          })
-        }
-
-        // 2. Process animated player tracking overlays (using ultra-fast single FFmpeg filter per track)
-        if (hasTracking) {
-          trackingOverlays.forEach((track) => {
-            const imgFileName = `overlay_spot_${Date.now()}_${inputIdx}.png`
-            const imgPath = path.join(tempDir, imgFileName)
-            const base64Data = track.spotlightDataUrl.replace(/^data:image\/png;base64,/, "")
-            fs.writeFileSync(imgPath, base64Data, 'base64')
-
-            command.input(imgPath)
-            const enableCond = `between(t,${track.startTime.toFixed(2)},${track.endTime.toFixed(2)})`
-            const nextStream = `v${inputIdx}`
-            filterComplex += `[${lastStream}][${inputIdx}:v]overlay=x='${track.exprX}':y='${track.exprY}':enable='${enableCond}'[${nextStream}];`
-            lastStream = nextStream
-            inputIdx++
-          })
-        }
-
-        // Remove trailing semicolon
-        filterComplex = filterComplex.slice(0, -1)
+      if (hasSequence) {
+        command.input(overlaySequencePath)
+          .inputOptions(['-framerate 30', '-f image2'])
 
         command
-          .complexFilter(filterComplex, [lastStream])
+          .complexFilter('[0:v][1:v]overlay=0:0[out]', ['out'])
           .outputOptions(['-c:v libx264', '-preset ultrafast', '-c:a copy'])
       } else {
         // Fast copy if no annotations to burn
@@ -114,9 +72,27 @@ function createWindow() {
       command
         .output(outputPath)
         .on('start', cmd => console.log('FFmpeg started:', cmd))
-        .on('end', () => resolve({ success: true, outputPath }))
+        .on('end', () => {
+          if (hasSequence) {
+            const tempDir = path.dirname(overlaySequencePath)
+            try {
+              fs.rmSync(tempDir, { recursive: true, force: true })
+            } catch (err) {
+              console.error('Failed to clean up temp dir:', err)
+            }
+          }
+          resolve({ success: true, outputPath })
+        })
         .on('error', err => {
           console.error('FFmpeg error:', err)
+          if (hasSequence) {
+            const tempDir = path.dirname(overlaySequencePath)
+            try {
+              fs.rmSync(tempDir, { recursive: true, force: true })
+            } catch (err) {
+              console.error('Failed to clean up temp dir:', err)
+            }
+          }
           resolve({ success: false, error: err.message })
         })
         .run()

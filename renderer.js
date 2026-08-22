@@ -372,15 +372,21 @@ async function doCut() {
     return ann.timestamp <= endTime && annEnd >= startTime
   })
 
-  // ★ Separate static annotations and animated tracking annotations
-  const staticAnns = targetAnns.filter(ann => ann.tool !== 'track')
-  const trackAnns  = targetAnns.filter(ann => ann.tool === 'track' && ann.trajectory && ann.trajectory.length > 0)
-
-  // 1. Generate static PNG overlays
-  const overlayImages = []
+  // ★ Generate frame-by-frame PNG sequence of all annotations
   const vRect = getVideoVisualRect()
+  let overlaySequencePath = null
+  let totalOverlaysCount = targetAnns.length
 
-  if (staticAnns.length > 0 && vRect) {
+  if (totalOverlaysCount > 0 && vRect) {
+    const os = require('os')
+    const fs = require('fs')
+
+    // Create temporary directory for PNG sequence
+    const tempDir = path.join(os.tmpdir(), `football_editor_clip_${Date.now()}`)
+    fs.mkdirSync(tempDir, { recursive: true })
+
+    overlaySequencePath = path.join(tempDir, 'frame_%04d.png')
+
     const offscreen = document.createElement('canvas')
     offscreen.width = vRect.videoWidth
     offscreen.height = vRect.videoHeight
@@ -389,127 +395,42 @@ async function doCut() {
     const scaleX = vRect.videoWidth / vRect.displayWidth
     const scaleY = vRect.videoHeight / vRect.displayHeight
 
-    staticAnns.forEach(ann => {
+    const fps = 30
+    const totalFrames = Math.ceil(duration * fps)
+
+    for (let f = 0; f < totalFrames; f++) {
+      const t = startTime + (f / fps)
+
       offCtx.clearRect(0, 0, offscreen.width, offscreen.height)
+
       offCtx.save()
       offCtx.scale(scaleX, scaleY)
       offCtx.translate(-vRect.offsetX, -vRect.offsetY)
-      renderAnnToCtx(offCtx, ann)
+
+      targetAnns.forEach(ann => {
+        if (isVisible(ann, t)) {
+          offCtx.globalAlpha = getOpacity(ann, t)
+          renderAnnToCtx(offCtx, ann, t)
+        }
+      })
+
       offCtx.restore()
 
-      const relStart = Math.max(0, ann.timestamp - startTime)
-      const relEnd   = ann.duration === -1 ? duration : Math.min(duration, (ann.timestamp + ann.duration) - startTime)
-
-      if (relEnd > relStart) {
-        overlayImages.push({
-          dataUrl: offscreen.toDataURL('image/png'),
-          startTime: relStart,
-          endTime: relEnd
-        })
-      }
-    })
-  }
-
-  // 2. Generate animated tracking overlays for FFmpeg (using ultra-fast nested if expressions)
-  const trackingOverlays = []
-  if (trackAnns.length > 0 && vRect) {
-    trackAnns.forEach(ann => {
-      // Calculate average player width in normalized coordinates
-      const avgW = ann.trajectory && ann.trajectory.length > 0
-        ? ann.trajectory.reduce((sum, pt) => sum + pt.w, 0) / ann.trajectory.length
-        : 0.05
-
-      // Calculate radius in video pixels (similar to editor drawing logic)
-      const videoPw = avgW * vRect.videoWidth
-      const rx = Math.max(16, videoPw * 0.8)
-      const ry = rx * 0.45
-
-      const scaleFactor = vRect.videoWidth / vRect.displayWidth
-      const lineWidth = Math.max(3, (ann.width || 2) * scaleFactor)
-      const shadowBlur = 12 * scaleFactor
-
-      // Setup canvas size with safety padding to prevent shadow clipping
-      const padding = Math.ceil(shadowBlur * 2 + 10)
-      const rw = Math.ceil(rx * 2 + padding)
-      const rh = Math.ceil(ry * 2 + padding)
-      const cx = rw / 2
-      const cy = rh / 2
-
-      const spotCanvas = document.createElement('canvas')
-      spotCanvas.width = rw
-      spotCanvas.height = rh
-      const sCtx = spotCanvas.getContext('2d')
-
-      const spotColor = ann.color || '#ffffff'
-
-      sCtx.save()
-      sCtx.beginPath()
-      sCtx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2)
-      sCtx.strokeStyle = spotColor
-      sCtx.lineWidth = lineWidth
-      sCtx.shadowColor = spotColor
-      sCtx.shadowBlur = shadowBlur
-      sCtx.stroke()
-
-      const grad = sCtx.createRadialGradient(cx, cy, 2, cx, cy, rx)
-      grad.addColorStop(0, hexToRgba(spotColor, 0.42))
-      grad.addColorStop(1, hexToRgba(spotColor, 0.0))
-      sCtx.fillStyle = grad
-      sCtx.fill()
-      sCtx.restore()
-
-      const spotlightDataUrl = spotCanvas.toDataURL('image/png')
-      const relTrackStart = ann.timestamp - startTime
-
-      // Sample points (step ~0.08s for ultra-lean expression)
-      const pts = []
-      const step = 0.08
-      let nextT = 0
-      for (const pt of ann.trajectory) {
-        if (pt.time >= nextT) {
-          pts.push(pt)
-          nextT += step
-        }
-      }
-
-      if (pts.length > 0) {
-        const lastPt = pts[pts.length - 1]
-        let exprX = `${Math.round(lastPt.x * vRect.videoWidth - cx)}`
-        let exprY = `${Math.round(lastPt.y * vRect.videoHeight - cy)}`
-
-        for (let i = pts.length - 2; i >= 0; i--) {
-          const tBoundary = (relTrackStart + pts[i + 1].time).toFixed(3)
-          const px = Math.round(pts[i].x * vRect.videoWidth - cx)
-          const py = Math.round(pts[i].y * vRect.videoHeight - cy)
-          exprX = `if(lt(t,${tBoundary}),${px},${exprX})`
-          exprY = `if(lt(t,${tBoundary}),${py},${exprY})`
-        }
-
-        const tStart = Math.max(0, relTrackStart)
-        const tEnd   = ann.duration === -1 ? duration : Math.min(duration, relTrackStart + ann.duration)
-
-        if (tEnd > tStart) {
-          trackingOverlays.push({
-            spotlightDataUrl,
-            startTime: tStart,
-            endTime: tEnd,
-            exprX,
-            exprY
-          })
-        }
-      }
-    })
+      const dataUrl = offscreen.toDataURL('image/png')
+      const base64Data = dataUrl.replace(/^data:image\/png;base64,/, "")
+      const framePath = path.join(tempDir, `frame_${String(f).padStart(4, '0')}.png`)
+      fs.writeFileSync(framePath, base64Data, 'base64')
+    }
   }
 
   btnCut.disabled = true; btnCut.classList.remove('ready')
-  const totalOverlaysCount = overlayImages.length + trackingOverlays.length
-  const statusMsg = totalOverlaysCount > 0 
-    ? `\u2702\uFE0F A processar e gravar ${totalOverlaysCount} elemento(s) no v\u00EDdeo...` 
+  const statusMsg = totalOverlaysCount > 0
+    ? `\u2702\uFE0F A processar e gravar ${totalOverlaysCount} elemento(s) no v\u00EDdeo...`
     : '\u2702\uFE0F A cortar...'
   showToast(statusMsg, 0)
 
   const result = await ipcRenderer.invoke('cut-video', {
-    inputPath: clip.inputPath, startTime, duration, outputPath, overlayImages, trackingOverlays
+    inputPath: clip.inputPath, startTime, duration, outputPath, overlaySequencePath
   })
 
   if (result.success) {
@@ -839,12 +760,13 @@ function redraw() {
   if (ds.current) renderAnn(ds.current)
 }
 
-function renderAnn(ann) {
-  renderAnnToCtx(ctx, ann)
+function renderAnn(ann, t = null) {
+  renderAnnToCtx(ctx, ann, t)
 }
 
-function renderAnnToCtx(targetCtx, ann) {
+function renderAnnToCtx(targetCtx, ann, t = null) {
   targetCtx.save()
+  const currentTime = t !== null ? t : (video.currentTime || 0)
 
   // ★ Case 1: Dual attachment (Line/Arrow/Circle/Rect/Pencil stretching between TWO tracked players)
   if (ann.attachedTrackStartId && ann.attachedTrackEndId) {
@@ -852,8 +774,8 @@ function renderAnnToCtx(targetCtx, ann) {
     const trackEnd   = ds.annotations.find(a => a.id === ann.attachedTrackEndId)
 
     if (trackStart && trackEnd) {
-      const posStart = getTrackCenterAtTime(trackStart, video.currentTime || 0)
-      const posEnd   = getTrackCenterAtTime(trackEnd, video.currentTime || 0)
+      const posStart = getTrackCenterAtTime(trackStart, currentTime)
+      const posEnd   = getTrackCenterAtTime(trackEnd, currentTime)
 
       if (posStart && posEnd) {
         if (ann.tool === 'pencil' && ann.points && ann.points.length > 1 && ann.attachStartOriginPos && ann.attachEndOriginPos) {
@@ -907,7 +829,7 @@ function renderAnnToCtx(targetCtx, ann) {
   if (ann.attachedTrackId && ann.attachOriginPos) {
     const parentTrack = ds.annotations.find(a => a.id === ann.attachedTrackId)
     if (parentTrack && parentTrack.trajectory) {
-      const currentPos = getTrackCenterAtTime(parentTrack, video.currentTime || 0)
+      const currentPos = getTrackCenterAtTime(parentTrack, currentTime)
       if (currentPos) {
         const deltaX = currentPos.x - ann.attachOriginPos.x
         const deltaY = currentPos.y - ann.attachOriginPos.y
@@ -925,7 +847,7 @@ function renderAnnToCtx(targetCtx, ann) {
     case 'arrow':  drawArrowCtx(targetCtx, ann);  break
     case 'circle': drawCircleCtx(targetCtx, ann); break
     case 'rect':   drawRectCtx(targetCtx, ann);   break
-    case 'track':  drawTrackSpotlight(targetCtx, ann); break
+    case 'track':  drawTrackSpotlight(targetCtx, ann, currentTime); break
   }
   targetCtx.restore()
 }
@@ -943,7 +865,7 @@ function hexToRgba(hex, alpha = 0.4) {
 }
 
 // ── Draw animated player tracking spotlight ────────────────────────
-function drawTrackSpotlight(c, ann) {
+function drawTrackSpotlight(c, ann, t = null) {
   const vRect = getVideoVisualRect()
   if (!vRect) return
 
@@ -960,7 +882,7 @@ function drawTrackSpotlight(c, ann) {
   }
 
   // Find trajectory point corresponding to current playback time
-  const currentTime = video.currentTime || 0
+  const currentTime = t !== null ? t : (video.currentTime || 0)
   const relTime = currentTime - ann.timestamp
   if (relTime < -0.3 || relTime > ann.duration) return
 
