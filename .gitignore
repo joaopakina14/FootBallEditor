@@ -26,3 +26,7 @@ npm-debug.log*
 # Temp files
 *.tmp
 *.temp
+
+# Local Code Signing Certificates
+fieldvision_test.pfx
+fieldvision_test.cer
