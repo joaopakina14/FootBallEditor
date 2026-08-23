@@ -599,3 +599,7 @@ video { flex: 1; width: 100%; height: calc(100% - var(--bar-h)); object-fit: con
   right: 8px;
   pointer-events: none;
 }
+
+.no-drag {
+  -webkit-app-region: no-drag !important;
+}
