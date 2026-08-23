@@ -1,6 +1,6 @@
 {
     "name":  "football-editor",
-    "version":  "1.0.3",
+    "version":  "1.0.5",
     "description":  "Video player for football analysis",
     "main":  "main.js",
     "scripts":  {
@@ -36,6 +36,10 @@
                                "uninstallerIcon":  "assets/icon.ico",
                                "artifactName":  "FieldVision-Setup-${version}.${ext}"
                            },
+                  "asar": true,
+                  "asarUnpack": [
+                                "tracker.py"
+                            ],
                   "files":  [
                                 "**/*",
                                 "!FieldVision-website/**/*",

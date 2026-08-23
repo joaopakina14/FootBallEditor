@@ -142,7 +142,9 @@ function createWindow() {
   ipcMain.handle('track-player', async (event, { videoPath, startTime, duration, bbox }) => {
     return new Promise((resolve) => {
       const { execFile } = require('child_process')
-      const scriptPath = path.join(__dirname, 'tracker.py')
+      let scriptPath = path.join(__dirname, 'tracker.py')
+      // Se estiver empacotado em ASAR, o Node.js child_process precisa do caminho unpacked na disk
+      scriptPath = scriptPath.replace('app.asar', 'app.asar.unpacked')
       const bboxJson = JSON.stringify(bbox)
 
       execFile('python', [scriptPath, videoPath, startTime.toString(), duration.toString(), bboxJson], (error, stdout, stderr) => {
