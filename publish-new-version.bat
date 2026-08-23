@@ -35,6 +35,10 @@ echo.
 echo [2/5] A atualizar o package.json e a compilar o Instalador...
 set VERSION_NUM=%VERSION:v=%
 powershell -Command "$json = Get-Content package.json -Raw | ConvertFrom-Json; $json.version = '%VERSION_NUM%'; $json | ConvertTo-Json -Depth 100 | Set-Content package.json"
+if exist "fieldvision_test.pfx" (
+    set CSC_LINK=fieldvision_test.pfx
+    set CSC_KEY_PASSWORD=FieldVision123
+)
 call npx electron-builder --win
 if %ERRORLEVEL% NEQ 0 (
     echo.
