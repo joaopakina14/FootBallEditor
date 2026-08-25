@@ -1152,6 +1152,76 @@ function getVideoVisualRect() {
   }
 }
 
+async function generateOverlaySequence(startTime, duration, annotations, isProUser, vRect) {
+  const targetAnns = annotations.filter(ann => {
+    if (ann.duration === -1) return true
+    const annEnd = ann.timestamp + ann.duration
+    return ann.timestamp <= (startTime + duration) && annEnd >= startTime
+  })
+
+  let totalOverlaysCount = targetAnns.length
+  const needsProcessing = totalOverlaysCount > 0 || !isProUser
+
+  if (!needsProcessing || !vRect) return { overlaySequencePath: null, totalOverlaysCount: 0 }
+
+  const os = require('os')
+  const fs = require('fs')
+
+  const tempDir = path.join(os.tmpdir(), `football_editor_clip_${Date.now()}_${Math.floor(Math.random()*1000)}`)
+  fs.mkdirSync(tempDir, { recursive: true })
+
+  const overlaySequencePath = path.join(tempDir, 'frame_%04d.png')
+
+  const offscreen = document.createElement('canvas')
+  offscreen.width = vRect.videoWidth
+  offscreen.height = vRect.videoHeight
+  const offCtx = offscreen.getContext('2d')
+
+  const scaleX = vRect.videoWidth / vRect.displayWidth
+  const scaleY = vRect.videoHeight / vRect.displayHeight
+
+  const fps = 30
+  const totalFrames = Math.ceil(duration * fps)
+
+  for (let f = 0; f < totalFrames; f++) {
+    const t = startTime + (f / fps)
+
+    offCtx.clearRect(0, 0, offscreen.width, offscreen.height)
+
+    offCtx.save()
+    offCtx.scale(scaleX, scaleY)
+    offCtx.translate(-vRect.offsetX, -vRect.offsetY)
+
+    targetAnns.forEach(ann => {
+      if (isVisible(ann, t)) {
+        offCtx.globalAlpha = getOpacity(ann, t)
+        renderAnnToCtx(offCtx, ann, t)
+      }
+    })
+
+    offCtx.restore()
+
+    if (!isProUser) {
+      offCtx.save()
+      offCtx.fillStyle = 'rgba(255, 255, 255, 0.45)'
+      offCtx.font = 'bold 20px sans-serif'
+      offCtx.shadowColor = 'rgba(0,0,0,0.6)'
+      offCtx.shadowBlur = 4
+      offCtx.fillText('Criado com FieldVision Free', 30, offscreen.height - 30)
+      offCtx.restore()
+    }
+
+    const dataUrl = offscreen.toDataURL('image/png')
+    const base64Data = dataUrl.replace(/^data:image\/png;base64,/, "")
+    const framePath = path.join(tempDir, `frame_${String(f).padStart(4, '0')}.png`)
+    fs.writeFileSync(framePath, base64Data, 'base64')
+    
+    if (f % 15 === 0) await new Promise(r => setTimeout(r, 0))
+  }
+
+  return { overlaySequencePath, totalOverlaysCount }
+}
+
 async function doCut() {
   if (!clip.inputPath || clip.inTime === null || clip.outTime === null) return
 
@@ -1190,77 +1260,13 @@ async function doCut() {
   const base     = path.basename(clip.inputPath, ext)
   const outputPath = path.join(dir, `cut${cutCount}_${base}${ext}`)
 
-  // ★ Filter annotations overlapping with [startTime, endTime]
-  const targetAnns = ds.annotations.filter(ann => {
-    if (ann.duration === -1) return true
-    const annEnd = ann.timestamp + ann.duration
-    return ann.timestamp <= endTime && annEnd >= startTime
-  })
-
   // ★ Generate frame-by-frame PNG sequence of all annotations
   const vRect = getVideoVisualRect()
-  let overlaySequencePath = null
-  let totalOverlaysCount = targetAnns.length
+  const seqResult = await generateOverlaySequence(startTime, duration, ds.annotations, isPro, vRect)
+  let overlaySequencePath = seqResult.overlaySequencePath
+  let totalOverlaysCount = seqResult.totalOverlaysCount
 
-  // Force image sequence generation if we need to burn watermark even if no annotations exist!
-  const needsProcessing = totalOverlaysCount > 0 || !isPro
-
-  if (needsProcessing && vRect) {
-    const os = require('os')
-    const fs = require('fs')
-
-    // Create temporary directory for PNG sequence
-    const tempDir = path.join(os.tmpdir(), `football_editor_clip_${Date.now()}`)
-    fs.mkdirSync(tempDir, { recursive: true })
-
-    overlaySequencePath = path.join(tempDir, 'frame_%04d.png')
-
-    const offscreen = document.createElement('canvas')
-    offscreen.width = vRect.videoWidth
-    offscreen.height = vRect.videoHeight
-    const offCtx = offscreen.getContext('2d')
-
-    const scaleX = vRect.videoWidth / vRect.displayWidth
-    const scaleY = vRect.videoHeight / vRect.displayHeight
-
-    const fps = 30
-    const totalFrames = Math.ceil(duration * fps)
-
-    for (let f = 0; f < totalFrames; f++) {
-      const t = startTime + (f / fps)
-
-      offCtx.clearRect(0, 0, offscreen.width, offscreen.height)
-
-      offCtx.save()
-      offCtx.scale(scaleX, scaleY)
-      offCtx.translate(-vRect.offsetX, -vRect.offsetY)
-
-      targetAnns.forEach(ann => {
-        if (isVisible(ann, t)) {
-          offCtx.globalAlpha = getOpacity(ann, t)
-          renderAnnToCtx(offCtx, ann, t)
-        }
-      })
-
-      offCtx.restore()
-
-      // ★ Draw watermark for Free Version (drawn relative to actual output resolution)
-      if (!isPro) {
-        offCtx.save()
-        offCtx.fillStyle = 'rgba(255, 255, 255, 0.45)'
-        offCtx.font = 'bold 20px sans-serif'
-        offCtx.shadowColor = 'rgba(0,0,0,0.6)'
-        offCtx.shadowBlur = 4
-        offCtx.fillText('Criado com FieldVision Free', 30, offscreen.height - 30)
-        offCtx.restore()
-      }
-
-      const dataUrl = offscreen.toDataURL('image/png')
-      const base64Data = dataUrl.replace(/^data:image\/png;base64,/, "")
-      const framePath = path.join(tempDir, `frame_${String(f).padStart(4, '0')}.png`)
-      fs.writeFileSync(framePath, base64Data, 'base64')
-    }
-  }
+  const needsProcessing = overlaySequencePath !== null
 
   btnCut.disabled = true; btnCut.classList.remove('ready')
   const statusMsg = needsProcessing
@@ -2367,7 +2373,13 @@ if (btnAddCurrentToPlaylist) {
     const clipTitle = title;
     
     // Clonar e ajustar os timestamps das anotações criadas antes do início do clip
-    const targetClones = JSON.parse(JSON.stringify(ds.annotations));
+    // Filtrar anotações que foram criadas especificamente para este clip
+    // (Aceitamos anotações criadas até 2 segundos antes do início do clip para dar margem)
+    const overlappingAnns = ds.annotations.filter(ann => {
+      return ann.timestamp >= t0 - 2 && ann.timestamp <= t1;
+    });
+    
+    const targetClones = JSON.parse(JSON.stringify(overlappingAnns));
     targetClones.forEach(ann => {
       if (ann.timestamp < t0) {
         ann.timestamp = t0;
@@ -2579,14 +2591,33 @@ if (btnExportPlaylist) {
 
     btnExportPlaylist.disabled = true;
     btnExportPlaylist.textContent = '⏳ A exportar...';
-    showToast(`⏳ A processar ${currentPl.clips.length} clip(s)…`, 0);
+    showToast(`⏳ A preparar ${currentPl.clips.length} clip(s) com marcações…`, 0);
 
-    const result = await ipcRenderer.invoke('export-playlist', {
-      clips: currentPl.clips.map(cl => ({
+    const vRect = getVideoVisualRect();
+    const exportClips = [];
+
+    for (let i = 0; i < currentPl.clips.length; i++) {
+      const cl = currentPl.clips[i];
+      let seqPath = null;
+      
+      const startTime = Math.min(cl.inTime, cl.outTime);
+      const duration = Math.abs(cl.outTime - cl.inTime);
+      
+      const seqResult = await generateOverlaySequence(startTime, duration, cl.annotations || [], isPro, vRect);
+      seqPath = seqResult.overlaySequencePath;
+      
+      exportClips.push({
         videoPath: cl.videoPath,
         inTime: cl.inTime,
-        outTime: cl.outTime
-      }))
+        outTime: cl.outTime,
+        overlaySequencePath: seqPath
+      });
+    }
+
+    showToast(`⏳ A exportar ${currentPl.clips.length} clip(s)…`, 0);
+
+    const result = await ipcRenderer.invoke('export-playlist', {
+      clips: exportClips
     });
 
     btnExportPlaylist.textContent = '📥 Exportar Playlist';
@@ -2676,7 +2707,12 @@ function handleTagEvent(key) {
     const currentPl = playlists.find(p => p.id === activePlaylistId);
     if (currentPl) {
       // Ajustar timestamps para que desenhos criados antes do início do clip comecem no início do clip!
-      const targetClones = JSON.parse(JSON.stringify(ds.annotations));
+      // Filtrar anotações que foram criadas especificamente para este clip
+      const overlappingAnns = ds.annotations.filter(ann => {
+        return ann.timestamp >= t0 - 2 && ann.timestamp <= t1;
+      });
+      
+      const targetClones = JSON.parse(JSON.stringify(overlappingAnns));
       targetClones.forEach(ann => {
         if (ann.timestamp < t0) {
           ann.timestamp = t0;

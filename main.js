@@ -122,10 +122,23 @@ function createWindow() {
       return { success: false, error: 'Falha ao criar pasta temporária: ' + e.message }
     }
 
+    // Step 1: ask user where to save FIRST before processing
+    const saveResult = await dialog.showSaveDialog(win, {
+      defaultPath: 'playlist_export.mp4',
+      filters: [{ name: 'Vídeo MP4', extensions: ['mp4'] }]
+    })
+
+    if (saveResult.canceled || !saveResult.filePath) {
+      try { fs.rmSync(tmpBase, { recursive: true, force: true }) } catch(_) {}
+      return { success: false, error: 'Cancelado' }
+    }
+
+    const outputPath = saveResult.filePath
+
     const segmentPaths = []
     let error = null
 
-    // Step 1: cut each clip segment to a temp MP4 file (re-encode for compat)
+    // Step 2: cut each clip segment to a temp MP4 file (re-encode for compat)
     for (let i = 0; i < clips.length; i++) {
       const cl = clips[i]
       const segOut = path.join(tmpBase, `seg_${i}.mp4`)
@@ -137,26 +150,55 @@ function createWindow() {
       console.log(`[export-playlist] Processing clip ${i+1}/${clips.length}: ${cl.videoPath} [${startTime}s → ${startTime+duration}s]`)
 
       await new Promise((res) => {
-        ffmpeg(cl.videoPath)
+        let command = ffmpeg(cl.videoPath)
           .setFfmpegPath(ffmpegStatic)
           .setStartTime(startTime)
           .setDuration(duration)
-          .outputOptions([
+
+          const hasSequence = !!cl.overlaySequencePath
+          
+          const standardVideoOpts = [
             '-c:v libx264',
             '-preset ultrafast',
             '-profile:v baseline',
             '-level 3.0',
             '-pix_fmt yuv420p',
+            '-r 30',
             '-c:a aac',
             '-ar 44100',
+            '-ac 2',
             '-movflags +faststart',
             '-avoid_negative_ts make_zero'
-          ])
-          .output(segOut)
-          .on('end', res)
+          ]
+  
+          if (hasSequence) {
+            command.input(cl.overlaySequencePath)
+              .inputOptions(['-framerate 30', '-f image2'])
+  
+            command
+              .complexFilter('[0:v][1:v]overlay=0:0,scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2,setsar=1[out]', ['out'])
+              .outputOptions(standardVideoOpts)
+          } else {
+            command
+              .complexFilter('[0:v]scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2,setsar=1[out]', ['out'])
+              .outputOptions(standardVideoOpts)
+          }
+
+        command.output(segOut)
+          .on('end', () => {
+            if (hasSequence) {
+              const tempDir = path.dirname(cl.overlaySequencePath)
+              try { fs.rmSync(tempDir, { recursive: true, force: true }) } catch (err) {}
+            }
+            res()
+          })
           .on('error', (err) => {
             console.error('[export-playlist] Segment error:', err.message)
             error = `Clip ${i+1}: ${err.message}`
+            if (hasSequence) {
+              const tempDir = path.dirname(cl.overlaySequencePath)
+              try { fs.rmSync(tempDir, { recursive: true, force: true }) } catch (err) {}
+            }
             res()
           })
           .run()
@@ -169,19 +211,6 @@ function createWindow() {
       try { fs.rmSync(tmpBase, { recursive: true, force: true }) } catch(_) {}
       return { success: false, error }
     }
-
-    // Step 3: ask user where to save
-    const saveResult = await dialog.showSaveDialog(win, {
-      defaultPath: 'playlist_export.mp4',
-      filters: [{ name: 'Vídeo MP4', extensions: ['mp4'] }]
-    })
-
-    if (saveResult.canceled || !saveResult.filePath) {
-      try { fs.rmSync(tmpBase, { recursive: true, force: true }) } catch(_) {}
-      return { success: false, error: 'Cancelado' }
-    }
-
-    const outputPath = saveResult.filePath
 
     // Step 2: write concat list with forward slashes (required by ffmpeg on Windows)
     const concatListPath = path.join(tmpBase, 'concat.txt')
