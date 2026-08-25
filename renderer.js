@@ -555,6 +555,7 @@ const btnCreatePlaylist      = document.getElementById('btnCreatePlaylist')
 const playlistSelect         = document.getElementById('playlistSelect')
 const btnRenamePlaylist      = document.getElementById('btnRenamePlaylist')
 const btnDeletePlaylist      = document.getElementById('btnDeletePlaylist')
+const playlistRenameInput    = document.getElementById('playlistRenameInput')
 const clipList               = document.getElementById('clipList')
 const tagShortcutsList       = document.getElementById('tagShortcutsList')
 const taggedEventsList       = document.getElementById('taggedEventsList')
@@ -2259,27 +2260,55 @@ if (playlistSelect) {
   });
 }
 
-if (btnRenamePlaylist) {
+if (btnRenamePlaylist && playlistRenameInput && playlistSelect) {
   btnRenamePlaylist.addEventListener('click', () => {
     if (!activePlaylistId) return;
     const currentPl = playlists.find(p => p.id === activePlaylistId);
     if (!currentPl) return;
     
-    let newName = currentPl.name;
-    try {
-      if (typeof prompt !== 'undefined') {
-        const userInput = prompt("Novo nome para a playlist:", currentPl.name);
-        if (userInput === null) return; // Cancelado
-        if (userInput.trim()) newName = userInput.trim();
+    // Configurar o input de renomeação
+    playlistRenameInput.value = currentPl.name;
+    
+    // Alternar visibilidades
+    playlistSelect.style.display = 'none';
+    btnRenamePlaylist.style.display = 'none';
+    if (btnDeletePlaylist) btnDeletePlaylist.style.display = 'none';
+    
+    playlistRenameInput.style.display = 'block';
+    playlistRenameInput.focus();
+    playlistRenameInput.select();
+  });
+
+  const finishRename = () => {
+    if (playlistRenameInput.style.display === 'none') return;
+    
+    if (activePlaylistId) {
+      const currentPl = playlists.find(p => p.id === activePlaylistId);
+      if (currentPl) {
+        const val = playlistRenameInput.value.trim();
+        if (val && val !== currentPl.name) {
+          currentPl.name = val;
+          savePlaylists();
+          loadPlaylists();
+        }
       }
-    } catch (e) {
-      console.warn("window.prompt não é suportado pelo Electron.");
     }
     
-    if (newName !== currentPl.name) {
-      currentPl.name = newName;
-      savePlaylists();
-      loadPlaylists();
+    // Restaurar visibilidades
+    playlistRenameInput.style.display = 'none';
+    playlistSelect.style.display = 'block';
+    updatePlaylistButtons();
+  };
+
+  playlistRenameInput.addEventListener('blur', finishRename);
+  playlistRenameInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      finishRename();
+    } else if (e.key === 'Escape') {
+      // Cancelar renomeação sem salvar
+      playlistRenameInput.style.display = 'none';
+      playlistSelect.style.display = 'block';
+      updatePlaylistButtons();
     }
   });
 }
