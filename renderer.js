@@ -2497,16 +2497,66 @@ function renderClips() {
     });
 
     // ── Click to play (but not when dragging or editing)
+    // ── Checkbox for bulk selection
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.className = 'clip-checkbox';
+    checkbox.dataset.id = cl.id;
+    checkbox.addEventListener('click', (e) => e.stopPropagation());
+    checkbox.addEventListener('change', () => {
+      updateBulkActions(currentPl);
+    });
+
     li.addEventListener('click', (e) => {
-      if (e.target === handle) return;
+      if (e.target === handle || e.target === checkbox) return;
       if (info.querySelector('input')) return;
       document.querySelectorAll('.clip-item').forEach(el => el.classList.remove('active'));
       li.classList.add('active');
       playPlaylistClip(cl);
     });
-    
+
+    li.insertBefore(checkbox, handle);
     clipList.appendChild(li);
   });
+
+  // Show/hide the clipsHeader based on whether there are clips
+  const clipsHeader = document.getElementById('clipsHeader');
+  const checkSelectAll = document.getElementById('checkSelectAll');
+  const btnDeleteSelected = document.getElementById('btnDeleteSelected');
+
+  if (clipsHeader) {
+    clipsHeader.style.display = currentPl.clips.length > 0 ? 'flex' : 'none';
+  }
+  if (checkSelectAll) {
+    checkSelectAll.checked = false;
+    checkSelectAll.indeterminate = false;
+    checkSelectAll.onchange = () => {
+      const cbs = clipList.querySelectorAll('.clip-checkbox');
+      cbs.forEach(cb => { cb.checked = checkSelectAll.checked; });
+      updateBulkActions(currentPl);
+    };
+  }
+
+  function updateBulkActions(pl) {
+    const cbs = clipList.querySelectorAll('.clip-checkbox');
+    const checked = [...cbs].filter(cb => cb.checked);
+    if (checkSelectAll) {
+      checkSelectAll.checked = checked.length === cbs.length && cbs.length > 0;
+      checkSelectAll.indeterminate = checked.length > 0 && checked.length < cbs.length;
+    }
+    if (btnDeleteSelected) {
+      btnDeleteSelected.style.display = checked.length > 0 ? 'flex' : 'none';
+      btnDeleteSelected.onclick = () => {
+        const selectedIds = new Set(checked.map(cb => cb.dataset.id));
+        if (confirm(`Eliminar ${selectedIds.size} clip(s) selecionado(s)?`)) {
+          pl.clips = pl.clips.filter(c => !selectedIds.has(c.id));
+          savePlaylists();
+          renderClips();
+          updatePlaylistButtons();
+        }
+      };
+    }
+  }
 }
 
 // 4b. Exportar playlist como vídeo único

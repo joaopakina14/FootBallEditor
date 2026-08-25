@@ -63,6 +63,14 @@
           </div>
           <button class="btn-open" id="btnAddCurrentToPlaylist" style="width: 100%; margin-top: 6px; font-size: 11px; padding: 6px 12px;" disabled data-i18n="sb-add-current-btn">+ Adicionar Seleção Atual</button>
           <button class="btn-open" id="btnExportPlaylist" style="width: 100%; margin-top: 6px; font-size: 11px; padding: 6px 12px; background: linear-gradient(135deg, #27ae60, #2ecc71); box-shadow: 0 4px 20px rgba(39, 174, 96, 0.25);" disabled>📥 Exportar Playlist</button>
+          <!-- Clips header: select-all + bulk actions -->
+          <div id="clipsHeader" class="clips-header" style="display: none;">
+            <label class="clip-select-all-label">
+              <input type="checkbox" id="checkSelectAll" />
+              <span>Selecionar Todos</span>
+            </label>
+            <button id="btnDeleteSelected" class="clip-bulk-del" style="display:none;" title="Eliminar selecionados">🗑️ Eliminar Seleção</button>
+          </div>
           <div class="sb-label" data-i18n="sb-clips-label">Clips na Playlist</div>
           <ul class="clip-list" id="clipList">
             <!-- Dynamic clips list -->

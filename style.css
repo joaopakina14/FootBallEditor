@@ -868,9 +868,114 @@ video { flex: 1; width: 100%; height: calc(100% - var(--bar-h)); object-fit: con
   color: var(--muted);
 }
 
+/* Checkbox for bulk selection */
+.clip-checkbox {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+  border: 1.5px solid var(--muted);
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  position: relative;
+}
+
+.clip-checkbox:checked {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.clip-checkbox:checked::after {
+  content: '✓';
+  position: absolute;
+  top: -1px;
+  left: 1px;
+  font-size: 11px;
+  color: white;
+  font-weight: 700;
+}
+
+.clip-checkbox:indeterminate {
+  background: rgba(229, 9, 20, 0.3);
+  border-color: var(--accent);
+}
+
+/* Clips header row (select-all + bulk actions) */
+.clips-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 4px 4px;
+  margin-top: 4px;
+}
+
+.clip-select-all-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--muted);
+  cursor: pointer;
+  user-select: none;
+}
+
+.clip-select-all-label input[type=checkbox] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  border: 1.5px solid var(--muted);
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  position: relative;
+}
+
+.clip-select-all-label input[type=checkbox]:checked {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.clip-select-all-label input[type=checkbox]:checked::after {
+  content: '✓';
+  position: absolute;
+  top: -1px;
+  left: 1px;
+  font-size: 10px;
+  color: white;
+  font-weight: 700;
+}
+
+.clip-bulk-del {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  color: #ff6b6b;
+  background: rgba(229, 9, 20, 0.12);
+  border: 1px solid rgba(229, 9, 20, 0.3);
+  border-radius: 6px;
+  padding: 3px 8px;
+  cursor: pointer;
+  transition: background 0.15s;
+  white-space: nowrap;
+}
+
+.clip-bulk-del:hover {
+  background: rgba(229, 9, 20, 0.25);
+}
+
 .clip-actions {
   display: flex;
   gap: 6px;
+  flex-shrink: 0;
 }
 
 .clip-act-btn {

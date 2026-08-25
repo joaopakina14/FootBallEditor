@@ -113,74 +113,99 @@ function createWindow() {
 
   // ── Export playlist: concatenate clips into one video ──────────────────
   ipcMain.handle('export-playlist', async (event, { clips }) => {
-    return new Promise(async (resolve) => {
-      const os = require('os')
-      const tmpBase = path.join(os.tmpdir(), `fv_export_${Date.now()}`)
+    const os = require('os')
+    const tmpBase = path.join(os.tmpdir(), `fv_export_${Date.now()}`)
+
+    try {
       fs.mkdirSync(tmpBase, { recursive: true })
+    } catch(e) {
+      return { success: false, error: 'Falha ao criar pasta temporária: ' + e.message }
+    }
 
-      const segmentPaths = []
-      let error = null
+    const segmentPaths = []
+    let error = null
 
-      // Step 1: cut each clip segment to a temp file
-      for (let i = 0; i < clips.length; i++) {
-        const cl = clips[i]
-        const segOut = path.join(tmpBase, `seg_${i}.mp4`)
-        segmentPaths.push(segOut)
+    // Step 1: cut each clip segment to a temp MP4 file (re-encode for compat)
+    for (let i = 0; i < clips.length; i++) {
+      const cl = clips[i]
+      const segOut = path.join(tmpBase, `seg_${i}.mp4`)
+      segmentPaths.push(segOut)
 
-        const startTime = Math.min(cl.inTime, cl.outTime)
-        const duration  = Math.abs(cl.outTime - cl.inTime)
+      const startTime = Math.min(cl.inTime, cl.outTime)
+      const duration  = Math.abs(cl.outTime - cl.inTime)
 
-        await new Promise((res) => {
-          ffmpeg(cl.videoPath)
-            .setFfmpegPath(ffmpegStatic)
-            .setStartTime(startTime)
-            .setDuration(duration)
-            .outputOptions(['-c:v libx264', '-preset ultrafast', '-c:a aac', '-avoid_negative_ts make_zero'])
-            .output(segOut)
-            .on('end', res)
-            .on('error', (err) => { error = err.message; res() })
-            .run()
-        })
+      console.log(`[export-playlist] Processing clip ${i+1}/${clips.length}: ${cl.videoPath} [${startTime}s → ${startTime+duration}s]`)
 
-        if (error) break
-      }
-
-      if (error) {
-        try { fs.rmSync(tmpBase, { recursive: true, force: true }) } catch(_) {}
-        return resolve({ success: false, error })
-      }
-
-      // Step 2: write concat list
-      const concatListPath = path.join(tmpBase, 'concat.txt')
-      const concatContent = segmentPaths.map(p => `file '${p.replace(/'/g, "'\\''")}'`).join('\n')
-      fs.writeFileSync(concatListPath, concatContent, 'utf8')
-
-      // Step 3: ask user where to save
-      const saveResult = await dialog.showSaveDialog(win, {
-        defaultPath: 'playlist_export.mp4',
-        filters: [{ name: 'Vídeo MP4', extensions: ['mp4'] }]
+      await new Promise((res) => {
+        ffmpeg(cl.videoPath)
+          .setFfmpegPath(ffmpegStatic)
+          .setStartTime(startTime)
+          .setDuration(duration)
+          .outputOptions([
+            '-c:v libx264',
+            '-preset ultrafast',
+            '-profile:v baseline',
+            '-level 3.0',
+            '-pix_fmt yuv420p',
+            '-c:a aac',
+            '-ar 44100',
+            '-movflags +faststart',
+            '-avoid_negative_ts make_zero'
+          ])
+          .output(segOut)
+          .on('end', res)
+          .on('error', (err) => {
+            console.error('[export-playlist] Segment error:', err.message)
+            error = `Clip ${i+1}: ${err.message}`
+            res()
+          })
+          .run()
       })
 
-      if (saveResult.canceled || !saveResult.filePath) {
-        try { fs.rmSync(tmpBase, { recursive: true, force: true }) } catch(_) {}
-        return resolve({ success: false, error: 'Cancelado' })
-      }
+      if (error) break
+    }
 
-      const outputPath = saveResult.filePath
+    if (error) {
+      try { fs.rmSync(tmpBase, { recursive: true, force: true }) } catch(_) {}
+      return { success: false, error }
+    }
 
-      // Step 4: concatenate all segments into the final file
+    // Step 3: ask user where to save
+    const saveResult = await dialog.showSaveDialog(win, {
+      defaultPath: 'playlist_export.mp4',
+      filters: [{ name: 'Vídeo MP4', extensions: ['mp4'] }]
+    })
+
+    if (saveResult.canceled || !saveResult.filePath) {
+      try { fs.rmSync(tmpBase, { recursive: true, force: true }) } catch(_) {}
+      return { success: false, error: 'Cancelado' }
+    }
+
+    const outputPath = saveResult.filePath
+
+    // Step 2: write concat list with forward slashes (required by ffmpeg on Windows)
+    const concatListPath = path.join(tmpBase, 'concat.txt')
+    const concatContent = segmentPaths
+      .map(p => `file '${p.replace(/\\/g, '/').replace(/'/g, "\\'")}'`)
+      .join('\n')
+    fs.writeFileSync(concatListPath, concatContent, 'utf8')
+    console.log('[export-playlist] concat.txt:\n', concatContent)
+
+    // Step 4: concatenate all segments
+    return new Promise((resolve) => {
       ffmpeg()
         .setFfmpegPath(ffmpegStatic)
-        .input(concatListPath)
+        .input(concatListPath.replace(/\\/g, '/'))
         .inputOptions(['-f concat', '-safe 0'])
         .outputOptions(['-c copy'])
         .output(outputPath)
-        .on('start', cmd => console.log('Export playlist FFmpeg:', cmd))
+        .on('start', cmd => console.log('[export-playlist] FFmpeg concat:', cmd))
         .on('end', () => {
           try { fs.rmSync(tmpBase, { recursive: true, force: true }) } catch(_) {}
           resolve({ success: true, outputPath })
         })
         .on('error', (err) => {
+          console.error('[export-playlist] Concat error:', err.message)
           try { fs.rmSync(tmpBase, { recursive: true, force: true }) } catch(_) {}
           resolve({ success: false, error: err.message })
         })
