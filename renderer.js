@@ -261,7 +261,15 @@ const appTranslations = {
     "toast-limit-annotations-short": "⚠️ Límite Free: Máximo de 3 anotaciones por video alcanzado.",
     "toast-link-players": "🔗 ¡Línea de enlace elástico conectada a ambos jugadores!",
     "toast-attach-player": "🚗 ¡Anotación fijada al jugador! ¡Se va de paseo!",
-    "toast-open-folder": "Abrir carpeta"
+    "toast-open-folder": "Abrir carpeta",
+    "sb-playlist-title": "Playlists Tácticas",
+    "select-playlist-prompt": "-- Elegir Playlist --",
+    "sb-add-current-btn": "+ Añadir Selección Actual",
+    "sb-clips-label": "Clips en la Playlist",
+    "sb-tagging-title": "Panel de Eventos",
+    "sb-tag-config": "Configurar Accesos Directos",
+    "tag-info-desc": "Presione las teclas en el teclado para marcar eventos retroactivamente (5s antes a 3s después).",
+    "sb-tagged-events": "Eventos Registrados"
   },
   fr: {
     "empty-title": "Aucune vidéo chargée",
@@ -339,7 +347,15 @@ const appTranslations = {
     "toast-limit-annotations-short": "⚠️ Limite Free : Maximum de 3 annotations par vidéo atteint.",
     "toast-link-players": "🔗 Ligne de liaison élastique connectée aux deux joueurs !",
     "toast-attach-player": "🚗 Annotation attachée au joueur ! En route !",
-    "toast-open-folder": "Ouvrir le dossier"
+    "toast-open-folder": "Ouvrir le dossier",
+    "sb-playlist-title": "Playlists Tactiques",
+    "select-playlist-prompt": "-- Choisir une Playlist --",
+    "sb-add-current-btn": "+ Ajouter la Sélection Actuelle",
+    "sb-clips-label": "Clips dans la Playlist",
+    "sb-tagging-title": "Panneau d'Événements",
+    "sb-tag-config": "Configurer les Raccourcis",
+    "tag-info-desc": "Appuyez sur les touches du clavier pour marquer les événements rétroactivement (5s avant à 3s après).",
+    "sb-tagged-events": "Événements Enregistrés"
   },
   de: {
     "empty-title": "Keine Videodatei geladen",
@@ -417,7 +433,15 @@ const appTranslations = {
     "toast-limit-annotations-short": "⚠️ Free-Limit: Maximum von 3 Anmerkungen pro Video erreicht.",
     "toast-link-players": "🔗 Elastische Verbindungslinie zwischen beiden Spielern aktiv!",
     "toast-attach-player": "🚗 Anmerkung an Spieler angeheftet!",
-    "toast-open-folder": "Ordner öffnen"
+    "toast-open-folder": "Ordner öffnen",
+    "sb-playlist-title": "Taktische Playlists",
+    "select-playlist-prompt": "-- Playlist Auswählen --",
+    "sb-add-current-btn": "+ Aktuelle Auswahl Hinzufügen",
+    "sb-clips-label": "Clips in der Playlist",
+    "sb-tagging-title": "Ereignis-Panel",
+    "sb-tag-config": "Tastenkombinationen Konfigurieren",
+    "tag-info-desc": "Drücken Sie die Tasten auf der Tastatur, um Ereignisse rückwirkend zu markieren (5s vor bis 3s danach).",
+    "sb-tagged-events": "Registrierte Ereignisse"
   }
 };
 
@@ -686,6 +710,10 @@ function loadVideo(filePath) {
   clip.outTime   = null
   ds.annotations = []
   ds.current     = null
+  taggedEvents   = []
+  if (typeof renderTaggedEvents === 'function') {
+    renderTaggedEvents()
+  }
   resetClipUI()
   redraw()
   updateTimelineMarkers()
@@ -966,9 +994,28 @@ async function loadAnnotations(videoPath) {
         '2': 'Shot Conceded',
         '3': 'Possession Lost',
         '4': 'Possession Recovered'
+      },
+      es: {
+        '1': 'Tiro Realizado',
+        '2': 'Tiro Concedido',
+        '3': 'Posesión Perdida',
+        '4': 'Recuperación'
+      },
+      fr: {
+        '1': 'Tir Effectué',
+        '2': 'Tir Concédé',
+        '3': 'Ballon Perdu',
+        '4': 'Ballon Récupéré'
+      },
+      de: {
+        '1': 'Torschuss',
+        '2': 'Torschuss erlitten',
+        '3': 'Ballverlust',
+        '4': 'Balleroberung'
       }
     };
-    const lang = currentAppLang === 'pt' ? 'pt' : 'en';
+    let lang = currentAppLang;
+    if (!defaultKeys[lang]) lang = 'en';
     
     if (result.success && result.shortcutKeys && Object.keys(result.shortcutKeys).length > 0) {
       shortcutKeys = result.shortcutKeys
@@ -979,6 +1026,13 @@ async function loadAnnotations(videoPath) {
         saveShortcutNames()
       }, 100)
     }
+    
+    // Garantir que nenhum atalho fica vazio
+    Object.keys(shortcutKeys).forEach(key => {
+      if (!shortcutKeys[key] || shortcutKeys[key].trim() === '') {
+        shortcutKeys[key] = defaultKeys[lang][key] || `Evento ${key}`;
+      }
+    });
     
     if (typeof renderShortcutList === 'function') {
       renderShortcutList()
@@ -2569,6 +2623,16 @@ function loadShortcutNames() {
   if (Object.keys(shortcutKeys).length === 0) {
     shortcutKeys = JSON.parse(JSON.stringify(defaultKeys[lang]));
     saveShortcutNames();
+  } else {
+    // Garantir que nenhum atalho carregado do localStorage fica vazio
+    let fixed = false;
+    Object.keys(shortcutKeys).forEach(key => {
+      if (!shortcutKeys[key] || shortcutKeys[key].trim() === '') {
+        shortcutKeys[key] = defaultKeys[lang][key] || `Evento ${key}`;
+        fixed = true;
+      }
+    });
+    if (fixed) saveShortcutNames();
   }
   
   renderShortcutList();
@@ -2642,11 +2706,22 @@ function renderShortcutList() {
   if (!tagShortcutsList) return;
   tagShortcutsList.innerHTML = '';
   
+  const defaultKeys = {
+    pt: { '1': 'Remate Feito', '2': 'Remate Sofrido', '3': 'Perda de Bola', '4': 'Recuperação' },
+    en: { '1': 'Shot Taken', '2': 'Shot Conceded', '3': 'Possession Lost', '4': 'Possession Recovered' },
+    es: { '1': 'Tiro Realizado', '2': 'Tiro Concedido', '3': 'Posesión Perdida', '4': 'Recuperación' },
+    fr: { '1': 'Tir Effectué', '2': 'Tir Concédé', '3': 'Ballon Perdu', '4': 'Ballon Récupéré' },
+    de: { '1': 'Torschuss', '2': 'Torschuss erlitten', '3': 'Ballverlust', '4': 'Balleroberung' }
+  };
+  let lang = currentAppLang;
+  if (!defaultKeys[lang]) lang = 'en';
+  
   // Ordenar chaves numericamente
   const sortedKeys = Object.keys(shortcutKeys).sort((a, b) => parseInt(a) - parseInt(b));
   
   sortedKeys.forEach(key => {
     const value = shortcutKeys[key];
+    const defaultValue = defaultKeys[lang][key] || `Evento ${key}`;
     
     const div = document.createElement('div');
     div.className = 'shortcut-item';
@@ -2659,10 +2734,10 @@ function renderShortcutList() {
     input.type = 'text';
     input.className = 'sc-name-input';
     input.dataset.key = key;
-    input.value = value;
+    input.value = value || defaultValue;
     
     input.addEventListener('change', (e) => {
-      shortcutKeys[key] = e.target.value.trim() || `Evento ${key}`;
+      shortcutKeys[key] = e.target.value.trim() || defaultValue;
       saveShortcutNames();
     });
     
