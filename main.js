@@ -99,6 +99,95 @@ function createWindow() {
     })
   })
 
+  // ── Save dialog for playlist export ────────────────────────────────────
+  ipcMain.handle('show-save-dialog', async (event, { defaultName }) => {
+    const result = await dialog.showSaveDialog(win, {
+      defaultPath: defaultName || 'playlist_export.mp4',
+      filters: [
+        { name: 'Vídeo MP4', extensions: ['mp4'] }
+      ]
+    })
+    if (result.canceled || !result.filePath) return null
+    return result.filePath
+  })
+
+  // ── Export playlist: concatenate clips into one video ──────────────────
+  ipcMain.handle('export-playlist', async (event, { clips }) => {
+    return new Promise(async (resolve) => {
+      const os = require('os')
+      const tmpBase = path.join(os.tmpdir(), `fv_export_${Date.now()}`)
+      fs.mkdirSync(tmpBase, { recursive: true })
+
+      const segmentPaths = []
+      let error = null
+
+      // Step 1: cut each clip segment to a temp file
+      for (let i = 0; i < clips.length; i++) {
+        const cl = clips[i]
+        const segOut = path.join(tmpBase, `seg_${i}.mp4`)
+        segmentPaths.push(segOut)
+
+        const startTime = Math.min(cl.inTime, cl.outTime)
+        const duration  = Math.abs(cl.outTime - cl.inTime)
+
+        await new Promise((res) => {
+          ffmpeg(cl.videoPath)
+            .setFfmpegPath(ffmpegStatic)
+            .setStartTime(startTime)
+            .setDuration(duration)
+            .outputOptions(['-c:v libx264', '-preset ultrafast', '-c:a aac', '-avoid_negative_ts make_zero'])
+            .output(segOut)
+            .on('end', res)
+            .on('error', (err) => { error = err.message; res() })
+            .run()
+        })
+
+        if (error) break
+      }
+
+      if (error) {
+        try { fs.rmSync(tmpBase, { recursive: true, force: true }) } catch(_) {}
+        return resolve({ success: false, error })
+      }
+
+      // Step 2: write concat list
+      const concatListPath = path.join(tmpBase, 'concat.txt')
+      const concatContent = segmentPaths.map(p => `file '${p.replace(/'/g, "'\\''")}'`).join('\n')
+      fs.writeFileSync(concatListPath, concatContent, 'utf8')
+
+      // Step 3: ask user where to save
+      const saveResult = await dialog.showSaveDialog(win, {
+        defaultPath: 'playlist_export.mp4',
+        filters: [{ name: 'Vídeo MP4', extensions: ['mp4'] }]
+      })
+
+      if (saveResult.canceled || !saveResult.filePath) {
+        try { fs.rmSync(tmpBase, { recursive: true, force: true }) } catch(_) {}
+        return resolve({ success: false, error: 'Cancelado' })
+      }
+
+      const outputPath = saveResult.filePath
+
+      // Step 4: concatenate all segments into the final file
+      ffmpeg()
+        .setFfmpegPath(ffmpegStatic)
+        .input(concatListPath)
+        .inputOptions(['-f concat', '-safe 0'])
+        .outputOptions(['-c copy'])
+        .output(outputPath)
+        .on('start', cmd => console.log('Export playlist FFmpeg:', cmd))
+        .on('end', () => {
+          try { fs.rmSync(tmpBase, { recursive: true, force: true }) } catch(_) {}
+          resolve({ success: true, outputPath })
+        })
+        .on('error', (err) => {
+          try { fs.rmSync(tmpBase, { recursive: true, force: true }) } catch(_) {}
+          resolve({ success: false, error: err.message })
+        })
+        .run()
+    })
+  })
+
   // Open folder in Explorer and highlight the file
   ipcMain.handle('show-in-folder', (event, filePath) => {
     shell.showItemInFolder(filePath)

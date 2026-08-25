@@ -560,7 +560,8 @@ const clipList               = document.getElementById('clipList')
 const tagShortcutsList       = document.getElementById('tagShortcutsList')
 const taggedEventsList       = document.getElementById('taggedEventsList')
 const btnAddCurrentToPlaylist = document.getElementById('btnAddCurrentToPlaylist')
-const btnAddTagShortcut      = document.getElementById('btnAddTagShortcut')
+const btnExportPlaylist       = document.getElementById('btnExportPlaylist')
+const btnAddTagShortcut       = document.getElementById('btnAddTagShortcut')
 
 // License UI elements
 const licenseBadge        = document.getElementById('licenseBadge')
@@ -2210,8 +2211,14 @@ function savePlaylists() {
 
 function updatePlaylistButtons() {
   const isSelected = !!activePlaylistId;
+  const currentPl = playlists.find(p => p.id === activePlaylistId);
+  const hasClips = !!(currentPl && currentPl.clips && currentPl.clips.length > 0);
+
   if (btnAddCurrentToPlaylist) {
     btnAddCurrentToPlaylist.disabled = !isSelected;
+  }
+  if (btnExportPlaylist) {
+    btnExportPlaylist.disabled = !hasClips;
   }
   if (btnRenamePlaylist) {
     btnRenamePlaylist.style.display = isSelected ? 'flex' : 'none';
@@ -2389,18 +2396,47 @@ function renderClips() {
   const currentPl = playlists.find(p => p.id === activePlaylistId);
   if (!currentPl || !currentPl.clips) return;
   
+  let dragSrcIndex = null;
+
   currentPl.clips.forEach((cl, index) => {
     const li = document.createElement('li');
     li.className = 'clip-item';
     li.dataset.id = cl.id;
-    
-    // Info
+    li.draggable = true;
+
+    // ── Drag handle
+    const handle = document.createElement('span');
+    handle.className = 'clip-drag-handle';
+    handle.innerHTML = '⠿';
+    handle.title = 'Arrastar para reordenar';
+
+    // ── Info
     const info = document.createElement('div');
     info.className = 'clip-info';
     
     const title = document.createElement('span');
     title.className = 'clip-title';
     title.textContent = `${index + 1}. ${cl.title}`;
+
+    // Double-click to rename clip
+    title.addEventListener('dblclick', (e) => {
+      e.stopPropagation();
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'sc-name-input';
+      input.value = cl.title;
+      input.style.cssText = 'font-size:12px;padding:2px 6px;width:100%;';
+      const save = () => {
+        const v = input.value.trim();
+        if (v) cl.title = v;
+        savePlaylists();
+        renderClips();
+      };
+      input.addEventListener('blur', save);
+      input.addEventListener('keydown', k => { if (k.key === 'Enter') save(); if (k.key === 'Escape') renderClips(); });
+      info.replaceChild(input, title);
+      input.focus(); input.select();
+    });
     
     const time = document.createElement('span');
     time.className = 'clip-time';
@@ -2409,30 +2445,61 @@ function renderClips() {
     info.appendChild(title);
     info.appendChild(time);
     
-    // Ações (Eliminar)
+    // ── Actions
     const actions = document.createElement('div');
     actions.className = 'clip-actions';
     
     const delBtn = document.createElement('button');
     delBtn.className = 'clip-act-btn delete';
     delBtn.innerHTML = '🗑️';
-    delBtn.title = "Remover da Playlist";
+    delBtn.title = 'Remover da Playlist';
     delBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       if (confirm(`Remover "${cl.title}" da playlist?`)) {
         currentPl.clips.splice(index, 1);
         savePlaylists();
         renderClips();
+        updatePlaylistButtons();
       }
     });
     
     actions.appendChild(delBtn);
     
+    li.appendChild(handle);
     li.appendChild(info);
     li.appendChild(actions);
     
-    // Clicar no clip da playlist para reproduzir
-    li.addEventListener('click', () => {
+    // ── Drag events for reordering
+    li.addEventListener('dragstart', (e) => {
+      dragSrcIndex = index;
+      li.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    li.addEventListener('dragend', () => {
+      li.classList.remove('dragging');
+      document.querySelectorAll('.clip-item').forEach(el => el.classList.remove('drag-over'));
+    });
+    li.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      document.querySelectorAll('.clip-item').forEach(el => el.classList.remove('drag-over'));
+      li.classList.add('drag-over');
+    });
+    li.addEventListener('drop', (e) => {
+      e.preventDefault();
+      li.classList.remove('drag-over');
+      if (dragSrcIndex === null || dragSrcIndex === index) return;
+      const moved = currentPl.clips.splice(dragSrcIndex, 1)[0];
+      currentPl.clips.splice(index, 0, moved);
+      dragSrcIndex = null;
+      savePlaylists();
+      renderClips();
+    });
+
+    // ── Click to play (but not when dragging or editing)
+    li.addEventListener('click', (e) => {
+      if (e.target === handle) return;
+      if (info.querySelector('input')) return;
       document.querySelectorAll('.clip-item').forEach(el => el.classList.remove('active'));
       li.classList.add('active');
       playPlaylistClip(cl);
@@ -2441,6 +2508,49 @@ function renderClips() {
     clipList.appendChild(li);
   });
 }
+
+// 4b. Exportar playlist como vídeo único
+if (btnExportPlaylist) {
+  btnExportPlaylist.addEventListener('click', async () => {
+    if (!activePlaylistId) return;
+    const currentPl = playlists.find(p => p.id === activePlaylistId);
+    if (!currentPl || !currentPl.clips || currentPl.clips.length === 0) {
+      showToast('❌ A playlist está vazia.', 3000);
+      return;
+    }
+
+    // Validate all clips have a valid videoPath
+    const invalid = currentPl.clips.filter(cl => !cl.videoPath);
+    if (invalid.length > 0) {
+      showToast(`❌ ${invalid.length} clip(s) sem caminho de vídeo válido.`, 3000);
+      return;
+    }
+
+    btnExportPlaylist.disabled = true;
+    btnExportPlaylist.textContent = '⏳ A exportar...';
+    showToast(`⏳ A processar ${currentPl.clips.length} clip(s)…`, 0);
+
+    const result = await ipcRenderer.invoke('export-playlist', {
+      clips: currentPl.clips.map(cl => ({
+        videoPath: cl.videoPath,
+        inTime: cl.inTime,
+        outTime: cl.outTime
+      }))
+    });
+
+    btnExportPlaylist.textContent = '📥 Exportar Playlist';
+    updatePlaylistButtons();
+
+    if (result.success) {
+      showToast('✅ Playlist exportada com sucesso!', 6000, result.outputPath);
+    } else if (result.error !== 'Cancelado') {
+      showToast(`❌ Erro ao exportar: ${result.error}`, 5000);
+    } else {
+      toast.classList.remove('show');
+    }
+  });
+}
+
 
 // 5. Reproduzir clip selecionado da playlist
 async function playPlaylistClip(cl) {

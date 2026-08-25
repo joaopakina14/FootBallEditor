@@ -796,12 +796,13 @@ video { flex: 1; width: 100%; height: calc(100% - var(--bar-h)); object-fit: con
   background: rgba(255,255,255,0.02);
   border: 1px solid var(--border);
   border-radius: 8px;
-  padding: 8px 12px;
+  padding: 8px 10px 8px 8px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 6px;
   cursor: pointer;
-  transition: background 0.15s, border-color 0.15s;
+  transition: background 0.15s, border-color 0.15s, opacity 0.15s, transform 0.12s;
+  user-select: none;
 }
 
 .clip-item:hover {
@@ -814,11 +815,43 @@ video { flex: 1; width: 100%; height: calc(100% - var(--bar-h)); object-fit: con
   border-color: var(--accent);
 }
 
+.clip-item.dragging {
+  opacity: 0.4;
+  transform: scale(0.97);
+}
+
+.clip-item.drag-over {
+  border-color: #44dd88;
+  background: rgba(68, 221, 136, 0.06);
+  box-shadow: 0 0 0 2px rgba(68, 221, 136, 0.25);
+}
+
+.clip-drag-handle {
+  color: var(--muted);
+  font-size: 16px;
+  cursor: grab;
+  flex-shrink: 0;
+  padding: 0 4px 0 0;
+  line-height: 1;
+  opacity: 0.4;
+  transition: opacity 0.15s;
+}
+
+.clip-item:hover .clip-drag-handle {
+  opacity: 0.9;
+}
+
+.clip-drag-handle:active {
+  cursor: grabbing;
+}
+
 .clip-info {
   display: flex;
   flex-direction: column;
   gap: 2px;
   overflow: hidden;
+  flex: 1;
+  min-width: 0;
 }
 
 .clip-title {
