@@ -160,7 +160,7 @@ video { flex: 1; width: 100%; height: calc(100% - var(--bar-h)); object-fit: con
   width: auto;
   height: 62px;
   max-height: none;
-  max-width: calc(100vw - 24px);
+  max-width: calc(100% - 24px);
   padding: 6px 14px;
   gap: 8px;
   overflow-x: auto;
@@ -309,8 +309,9 @@ video { flex: 1; width: 100%; height: calc(100% - var(--bar-h)); object-fit: con
 
 /* Buttons row */
 .btn-row { display: flex; align-items: center; justify-content: space-between; }
-.btn-left, .btn-right { display: flex; align-items: center; gap: 4px; }
-.btn-center { flex: 1; display: flex; justify-content: center; }
+.btn-left { display: flex; align-items: center; gap: 6px; }
+.btn-right { display: flex; align-items: center; gap: 8px; }
+.btn-center { flex: 1; display: flex; justify-content: center; min-width: 0; padding: 0 10px; }
 
 .ctrl-btn { position: relative; width: 36px; height: 34px; border-radius: 7px; font-size: 16px; background: var(--ctrl-bg); color: var(--text); transition: background 0.15s, transform 0.1s, box-shadow 0.15s; display: flex; align-items: center; justify-content: center; }
 .ctrl-btn:hover:not(:disabled) { background: var(--ctrl-hover); }
@@ -319,7 +320,7 @@ video { flex: 1; width: 100%; height: calc(100% - var(--bar-h)); object-fit: con
 .ctrl-btn:disabled { opacity: 0.35; cursor: not-allowed; }
 
 /* Annotation count badge */
-.ctrl-btn[data-count]::after { content: attr(data-count); position: absolute; top: 2px; right: 1px; background: var(--accent2); color: white; font-size: 8px; font-weight: 700; min-width: 14px; height: 14px; border-radius: 7px; padding: 0 2px; display: flex; align-items: center; justify-content: center; line-height: 1; }
+.ctrl-btn[data-count]::after { content: attr(data-count); position: absolute; top: -4px; right: -4px; background: var(--accent2); color: white; font-size: 8px; font-weight: 700; min-width: 14px; height: 14px; border-radius: 7px; padding: 0 2px; display: flex; align-items: center; justify-content: center; line-height: 1; z-index: 10; box-shadow: 0 1px 4px rgba(0,0,0,0.4); }
 
 /* Clip IN/OUT buttons */
 .clip-btn { font-size: 11px; font-weight: 700; letter-spacing: -0.5px; }
@@ -342,7 +343,7 @@ video { flex: 1; width: 100%; height: calc(100% - var(--bar-h)); object-fit: con
 .volume-wrap { display: flex; align-items: center; gap: 6px; }
 #volumeSlider { -webkit-appearance: none; width: 72px; height: 4px; border-radius: 99px; background: var(--border); outline: none; cursor: pointer; }
 #volumeSlider::-webkit-slider-thumb { -webkit-appearance: none; width: 12px; height: 12px; border-radius: 50%; background: var(--accent); cursor: pointer; }
-.filename { font-size: 12px; color: var(--muted); max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.filename { font-size: 12px; color: var(--muted); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: center; }
 
 /* =========================================
    FULLSCREEN
@@ -943,5 +944,27 @@ video { flex: 1; width: 100%; height: calc(100% - var(--bar-h)); object-fit: con
 .event-time {
   font-size: 10px;
   color: var(--muted);
+}
+
+/* =========================================
+   ADAPTIVE SIDEBARS LAYOUT CONTRACTION
+   ========================================= */
+
+/* Adjust controls layout when sidebars are open */
+#playlistSidebar:not(.collapsed) ~ .player-center #volumeSlider,
+.player-center:has(~ #taggingSidebar:not(.collapsed)) #volumeSlider {
+  width: 45px;
+}
+
+/* When both sidebars are open, hide the volume slider and filename to save space */
+#playlistSidebar:not(.collapsed) ~ .player-center:has(~ #taggingSidebar:not(.collapsed)) #volumeSlider {
+  display: none;
+}
+#playlistSidebar:not(.collapsed) ~ .player-center:has(~ #taggingSidebar:not(.collapsed)) .filename {
+  display: none;
+}
+#playlistSidebar:not(.collapsed) ~ .player-center:has(~ #taggingSidebar:not(.collapsed)) .btn-left,
+#playlistSidebar:not(.collapsed) ~ .player-center:has(~ #taggingSidebar:not(.collapsed)) .btn-right {
+  gap: 2px;
 }
 
