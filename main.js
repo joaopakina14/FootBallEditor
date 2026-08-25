@@ -158,6 +158,7 @@ function createWindow() {
           const hasSequence = !!cl.overlaySequencePath
           
           const standardVideoOpts = [
+            '-map 0:a?',
             '-c:v libx264',
             '-preset ultrafast',
             '-profile:v baseline',
