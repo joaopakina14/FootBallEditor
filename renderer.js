@@ -34,6 +34,8 @@ const appTranslations = {
     "modal-inst-pro": "A tua licença Pro está ativa e validada neste computador. Obrigado pelo teu suporte!",
     "btn-activate": "Ativar FieldVision Pro",
     "btn-deactivate": "Desativar Licença",
+    "btn-export-pl": "📥 Exportar Playlist",
+    "btn-exporting": "⏳ A exportar...",
     "modal-buy-text": "Ainda não tens chave? ",
     "modal-buy-link": "Comprar Licença Pro (€29/ano)",
     "toast-tracker-select": "Clica e arrasta no canvas para desenhar uma caixa à volta do jogador a rastrear.",
@@ -120,6 +122,8 @@ const appTranslations = {
     "modal-inst-pro": "Your Pro licence is active and validated on this computer. Thank you for your support!",
     "btn-activate": "Activate FieldVision Pro",
     "btn-deactivate": "Deactivate Licence",
+    "btn-export-pl": "📥 Export Playlist",
+    "btn-exporting": "⏳ Exporting...",
     "modal-buy-text": "Don't have a key yet? ",
     "modal-buy-link": "Buy Pro Licence (€29/year)",
     "toast-tracker-select": "Click and drag on the canvas to draw a box around the player to track.",
@@ -206,6 +210,8 @@ const appTranslations = {
     "modal-inst-pro": "Tu licencia Pro está activa y validada en este ordenador. ¡Gracias por tu apoyo!",
     "btn-activate": "Activar FieldVision Pro",
     "btn-deactivate": "Desactivar Licencia",
+    "btn-export-pl": "📥 Exportar Playlist",
+    "btn-exporting": "⏳ Exportando...",
     "modal-buy-text": "¿Aún no tienes clave? ",
     "modal-buy-link": "Comprar Licencia Pro (€29/año)",
     "toast-tracker-select": "Haz clic y arrastra en el lienzo para dibujar un cuadro alrededor del jugador a rastrear.",
@@ -292,6 +298,8 @@ const appTranslations = {
     "modal-inst-pro": "Votre licence Pro est active et validée sur cet ordinateur. Merci pour votre soutien !",
     "btn-activate": "Activer FieldVision Pro",
     "btn-deactivate": "Désactiver la licence",
+    "btn-export-pl": "📥 Exporter la Playlist",
+    "btn-exporting": "⏳ Exportation...",
     "modal-buy-text": "Vous n'avez pas encore de clé ? ",
     "modal-buy-link": "Acheter une licence Pro (€29/an)",
     "toast-tracker-select": "Cliquez et glissez sur le canevas pour dessiner une boîte autour du joueur à suivre.",
@@ -378,6 +386,8 @@ const appTranslations = {
     "modal-inst-pro": "Ihre Pro-Lizenz ist auf diesem Computer aktiv und validiert. Vielen Dank für Ihre Unterstützung!",
     "btn-activate": "FieldVision Pro Aktivieren",
     "btn-deactivate": "Lizenz Deaktivieren",
+    "btn-export-pl": "📥 Playlist Exportieren",
+    "btn-exporting": "⏳ Exportieren...",
     "modal-buy-text": "Haben Sie noch keinen Schlüssel? ",
     "modal-buy-link": "Pro-Lizenz kaufen (€29/Jahr)",
     "toast-tracker-select": "Klicken und ziehen Sie auf der Leinwand, um ein Kästchen um den zu verfolgenden Spieler zu zeichnen.",
@@ -2590,7 +2600,7 @@ if (btnExportPlaylist) {
     }
 
     btnExportPlaylist.disabled = true;
-    btnExportPlaylist.textContent = '⏳ A exportar...';
+    btnExportPlaylist.textContent = t('btn-exporting', '⏳ A exportar...');
     showToast(`⏳ A preparar ${currentPl.clips.length} clip(s) com marcações…`, 0);
 
     const vRect = getVideoVisualRect();
@@ -2620,7 +2630,7 @@ if (btnExportPlaylist) {
       clips: exportClips
     });
 
-    btnExportPlaylist.textContent = '📥 Exportar Playlist';
+    btnExportPlaylist.textContent = t('btn-export-pl', '📥 Exportar Playlist');
     updatePlaylistButtons();
 
     if (result.success) {
