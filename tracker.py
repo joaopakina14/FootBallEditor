@@ -54,12 +54,38 @@ def extract_kit_color_signature(frame_hsv, bx, by, bw, bh):
     player_mask = cv2.bitwise_not(grass_mask)
 
     player_hsv = roi_hsv[player_mask > 0]
-    if len(player_hsv) < 10:
+    # If non-green pixels are less than 5% of the bounding box, assume green jersey and return None to bypass color matching
+    if len(player_hsv) < max(20, int((bw * bh) * 0.05)):
         return None
 
     hist = cv2.calcHist([player_hsv], [0], None, [180], [0, 180])
     cv2.normalize(hist, hist, 0, 1, cv2.NORM_MINMAX)
     return hist
+
+def verify_template_match(frame, bx, by, bw, bh, target_template):
+    """
+    Compara a textura/forma do jogador com o template inicial (NCC).
+    """
+    if target_template is None:
+        return True
+    h, w = frame.shape[:2]
+    bx = max(0, min(bx, w - 10))
+    by = max(0, min(by, h - 10))
+    bw = max(10, min(bw, w - bx))
+    bh = max(10, min(bh, h - by))
+
+    curr_patch = frame[by:by+bh, bx:bx+bw]
+    if curr_patch.size == 0:
+        return False
+
+    template_h, template_w = target_template.shape[:2]
+    try:
+        curr_resized = cv2.resize(curr_patch, (template_w, template_h), interpolation=cv2.INTER_LINEAR)
+        res = cv2.matchTemplate(curr_resized, target_template, cv2.TM_CCOEFF_NORMED)
+        score = res[0][0]
+        return score > 0.20  # Tolerância para movimento e rotação
+    except Exception:
+        return False
 
 def verify_color_match(frame_hsv, bx, by, bw, bh, target_hist):
     """
@@ -132,6 +158,13 @@ def track_player(video_path, start_time_sec, duration_sec, bbox):
     # Extract kit color signature
     kit_hist = extract_kit_color_signature(frame_hsv, bx, by, bw, bh)
 
+    # Extract initial patch template for visual tracking validation
+    init_patch = frame[by:by+bh, bx:bx+bw]
+    if init_patch.size > 0:
+        kit_template = cv2.resize(init_patch, (32, 64), interpolation=cv2.INTER_LINEAR)
+    else:
+        kit_template = None
+
     # Create Tracker (CSRT preferred)
     tracker = None
     if hasattr(cv2, 'TrackerCSRT_create'):
@@ -156,7 +189,8 @@ def track_player(video_path, start_time_sec, duration_sec, bbox):
     last_cx = bx + bw / 2.0
     last_cy = by + bh
     vx, vy = 0.0, 0.0
-    max_jump_pixels = work_w * 0.07
+    # Otimização contra saltos bruscos para jogadores adjacentes (limite adaptativo à escala do jogador)
+    max_jump_pixels = max(bw * 1.8, work_w * 0.04)
 
     trajectory.append({
         "frame": 0, "time": 0.0,
@@ -175,7 +209,8 @@ def track_player(video_path, start_time_sec, duration_sec, bbox):
             break
 
         frame_count += 1
-        frame = cv2.resize(raw_frame, (work_w, work_h), interpolation=cv2.INTER_NEAREST)
+        # Usar INTER_LINEAR para evitar pixelização de jogadores distantes (câmara alta)
+        frame = cv2.resize(raw_frame, (work_w, work_h), interpolation=cv2.INTER_LINEAR)
         frame_hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
         # 📺 TV Camera Shot Cut Detection:
@@ -212,8 +247,12 @@ def track_player(video_path, start_time_sec, duration_sec, bbox):
 
             dist_moved = np.hypot(cx - last_cx, cy - last_cy)
             color_ok = verify_color_match(frame_hsv, int(x), int(y), int(w), int(h), kit_hist)
+            temp_ok = verify_template_match(frame, int(x), int(y), int(w), int(h), kit_template)
+            
+            # Validação unificada: robusta contra camisolas verdes e oclusões rápidas
+            verification_ok = color_ok and temp_ok
 
-            if not color_ok:
+            if not verification_ok:
                 color_mismatch_count += 1
             else:
                 color_mismatch_count = max(0, color_mismatch_count - 1)
@@ -222,7 +261,7 @@ def track_player(video_path, start_time_sec, duration_sec, bbox):
             if color_mismatch_count > 4:
                 break
 
-            if dist_moved <= max_jump_pixels and color_ok:
+            if dist_moved <= max_jump_pixels and verification_ok:
                 new_vx = cx - last_cx
                 new_vy = cy - last_cy
                 vx = 0.6 * vx + 0.4 * new_vx

@@ -177,6 +177,11 @@ video { flex: 1; width: 100%; height: calc(100% - var(--bar-h)); object-fit: con
   margin: 0;
   text-align: left;
 }
+#dpToolsLabel {
+  font-size: 15px !important;
+  margin-right: 6px !important;
+  opacity: 0.85;
+}
 .draw-panel.horizontal .dp-sep {
   width: 1px;
   height: 28px;
@@ -231,13 +236,18 @@ video { flex: 1; width: 100%; height: calc(100% - var(--bar-h)); object-fit: con
 .draw-panel.horizontal .dp-actions {
   display: flex;
   flex-direction: row;
-  gap: 3px;
+  gap: 6px;
   width: auto;
 }
 .draw-panel.horizontal .dp-action {
-  width: 66px;
-  padding: 6px 2px;
-  font-size: 10px;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
 }
 
 /* Classes de Docking Persistente (Pure CSS para evitar race conditions no resize) */
@@ -613,3 +623,325 @@ video { flex: 1; width: 100%; height: calc(100% - var(--bar-h)); object-fit: con
   background: var(--surface);
   color: var(--text);
 }
+
+/* =========================================
+   SIDEBAR & PLAYLISTS / TAGGING STYLES
+   ========================================= */
+.player-wrap {
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  height: 100%;
+  background: #000;
+  position: relative;
+}
+
+.player-center {
+  flex: 1;
+  height: 100%;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background: #000;
+}
+
+/* Redefine positions relative to .player-center */
+.player-center video {
+  flex: 1;
+  width: 100%;
+  height: calc(100% - var(--bar-h));
+  object-fit: contain;
+}
+
+.player-center #drawCanvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: calc(100% - var(--bar-h));
+}
+
+.player-center .video-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: calc(100% - var(--bar-h));
+}
+
+/* Sidebar Panels */
+.sidebar-panel {
+  width: 280px;
+  height: 100%;
+  background: #121215;
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  z-index: 10;
+  transition: width 0.22s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.18s ease;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.sidebar-panel.right {
+  width: 270px;
+  border-right: none;
+  border-left: 1px solid var(--border);
+}
+
+.sidebar-panel.collapsed {
+  width: 0;
+  border: none;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.sb-header {
+  height: 48px;
+  padding: 0 14px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #18181c;
+  flex-shrink: 0;
+}
+
+.sb-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: 0.3px;
+}
+
+.sb-add-btn {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  background: var(--ctrl-bg);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+}
+
+.sb-add-btn:hover {
+  background: var(--ctrl-hover);
+  color: var(--accent);
+}
+
+.sb-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sb-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  margin-top: 6px;
+}
+
+.sb-sep {
+  height: 1px;
+  background: var(--border);
+  margin: 6px 0;
+}
+
+/* Playlists Selector */
+.playlist-selector-wrap {
+  position: relative;
+}
+
+.playlist-select {
+  width: 100%;
+  font-family: inherit;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  padding: 8px 12px;
+  font-size: 13px;
+  outline: none;
+  cursor: pointer;
+}
+
+.playlist-select option {
+  background: #18181c;
+  color: var(--text);
+}
+
+/* Clips List in Sidebar */
+.clip-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.clip-item {
+  background: rgba(255,255,255,0.02);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.clip-item:hover {
+  background: rgba(255,255,255,0.06);
+  border-color: var(--muted);
+}
+
+.clip-item.active {
+  background: rgba(229, 9, 20, 0.08);
+  border-color: var(--accent);
+}
+
+.clip-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow: hidden;
+}
+
+.clip-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.clip-time {
+  font-size: 10px;
+  color: var(--muted);
+}
+
+.clip-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.clip-act-btn {
+  font-size: 11px;
+  color: var(--muted);
+  padding: 4px;
+  border-radius: 4px;
+  transition: color 0.15s, background 0.15s;
+}
+
+.clip-act-btn:hover {
+  color: var(--text);
+  background: var(--ctrl-hover);
+}
+
+.clip-act-btn.delete:hover {
+  color: #ff5555;
+}
+
+/* Tagging Settings / Event Marking */
+.tag-shortcuts-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.shortcut-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sc-key {
+  width: 24px;
+  height: 24px;
+  background: var(--border);
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255,255,255,0.06);
+}
+
+.sc-name-input {
+  flex: 1;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 12px;
+  padding: 4px 8px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.sc-name-input:focus {
+  border-color: var(--accent);
+}
+
+.tag-info {
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.4;
+  margin-top: 8px;
+}
+
+.tagged-events-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.event-item {
+  background: rgba(255,255,255,0.02);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.event-item:hover {
+  background: rgba(255,255,255,0.06);
+}
+
+.event-details {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.event-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.event-time {
+  font-size: 10px;
+  color: var(--muted);
+}
+

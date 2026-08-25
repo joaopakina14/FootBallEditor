@@ -3,6 +3,11 @@ const path = require('path')
 
 // ── Licensing state ───────────────────────────────────────
 let isPro = false
+let shortcutKeys = {};
+let activePlaylistId = null;
+let playlists = [];
+let taggedEvents = [];
+let lastPausedTime = -1;
 
 // ── Translations / i18n ──────────────────────────────────
 let currentAppLang = localStorage.getItem('fv_app_lang') || 'en';
@@ -84,7 +89,15 @@ const appTranslations = {
     "toast-limit-annotations-short": "⚠️ Limite Free: Máximo de 3 anotações por vídeo atingido.",
     "toast-link-players": "🔗 Linha curva elástica ligada aos 2 jogadores!",
     "toast-attach-player": "🚗 Anotação presa ao jogador! Vai de boleia!",
-    "toast-open-folder": "Abrir pasta"
+    "toast-open-folder": "Abrir pasta",
+    "sb-playlist-title": "Playlists Táticas",
+    "select-playlist-prompt": "-- Escolher Playlist --",
+    "sb-add-current-btn": "+ Adicionar Seleção Atual",
+    "sb-clips-label": "Clips na Playlist",
+    "sb-tagging-title": "Painel de Eventos",
+    "sb-tag-config": "Configurar Atalhos",
+    "tag-info-desc": "Pressione as teclas no teclado para marcar eventos retroativamente (5s antes a 3s depois).",
+    "sb-tagged-events": "Eventos Registados"
   },
   en: {
     "empty-title": "No video loaded",
@@ -162,7 +175,15 @@ const appTranslations = {
     "toast-limit-annotations-short": "⚠️ Free Limit: Maximum of 3 annotations per video reached.",
     "toast-link-players": "🔗 Elastic link line attached to both players!",
     "toast-attach-player": "🚗 Annotation attached to player! Hitching a ride!",
-    "toast-open-folder": "Open folder"
+    "toast-open-folder": "Open folder",
+    "sb-playlist-title": "Tactical Playlists",
+    "select-playlist-prompt": "-- Choose Playlist --",
+    "sb-add-current-btn": "+ Add Current Selection",
+    "sb-clips-label": "Clips in Playlist",
+    "sb-tagging-title": "Events Panel",
+    "sb-tag-config": "Configure Shortcuts",
+    "tag-info-desc": "Press the keys on the keyboard to tag events retroactively (5s before to 3s after).",
+    "sb-tagged-events": "Registered Events"
   },
   es: {
     "empty-title": "Sin video cargado",
@@ -415,9 +436,14 @@ function formatString(str, ...args) {
 }
 
 function setAppLanguage(lang) {
+  const oldLang = currentAppLang;
   if (!appTranslations[lang]) lang = 'en';
   currentAppLang = lang;
   localStorage.setItem('fv_app_lang', lang);
+  
+  if (typeof translateDefaultShortcuts === 'function') {
+    translateDefaultShortcuts(oldLang, lang);
+  }
   
   // Set dropdown value
   const select = document.getElementById('appLangSelect');
@@ -451,6 +477,9 @@ function setAppLanguage(lang) {
   if (licenseBadge && statusVal) {
     licenseBadge.textContent = appTranslations[lang][isPro ? 'license-badge-pro' : 'license-badge-free'];
     statusVal.textContent = appTranslations[lang][isPro ? 'status-pro' : 'status-free'];
+  }
+  if (typeof loadPlaylists === 'function') {
+    loadPlaylists();
   }
 }
 
@@ -492,6 +521,19 @@ const clipZone      = document.getElementById('clipZone')
 const clipInMarker  = document.getElementById('clipInMarker')
 const clipOutMarker = document.getElementById('clipOutMarker')
 const toast         = document.getElementById('toast')
+
+// ── Playlists & Tagging UI Elements ───────────────────────
+const btnTogglePlaylist      = document.getElementById('btnTogglePlaylist')
+const btnToggleTagging       = document.getElementById('btnToggleTagging')
+const playlistSidebar        = document.getElementById('playlistSidebar')
+const taggingSidebar         = document.getElementById('taggingSidebar')
+const btnCreatePlaylist      = document.getElementById('btnCreatePlaylist')
+const playlistSelect         = document.getElementById('playlistSelect')
+const clipList               = document.getElementById('clipList')
+const tagShortcutsList       = document.getElementById('tagShortcutsList')
+const taggedEventsList       = document.getElementById('taggedEventsList')
+const btnAddCurrentToPlaylist = document.getElementById('btnAddCurrentToPlaylist')
+const btnAddTagShortcut      = document.getElementById('btnAddTagShortcut')
 
 // License UI elements
 const licenseBadge        = document.getElementById('licenseBadge')
@@ -756,6 +798,7 @@ function startRenderLoop() {
     if (!video.paused && video.duration) {
       updateProgress((video.currentTime / video.duration) * 100)
       timeCurrent.textContent = formatTime(video.currentTime)
+      checkAutoPause()
     }
     redraw()
     rafId = requestAnimationFrame(loop)
@@ -833,12 +876,22 @@ document.addEventListener('mousemove', () => {
 
 // ── Keyboard shortcuts ────────────────────────────────────
 document.addEventListener('keydown', e => {
+  // Ignorar atalhos se o utilizador estiver a escrever num campo de input/select
+  if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA' || document.activeElement.tagName === 'SELECT')) {
+    return
+  }
   if (e.code === 'KeyE' && !e.ctrlKey) { toggleEditMode(); return }
   if (e.code === 'KeyZ' && e.ctrlKey && !e.shiftKey) { undoDraw(); return }
   if ((e.code === 'KeyY' && e.ctrlKey) || (e.code === 'KeyZ' && e.ctrlKey && e.shiftKey)) { redoDraw(); return }
   if (e.code === 'KeyI' && !e.ctrlKey) { markIn(); return }
   if (e.code === 'KeyO' && !e.ctrlKey) { markOut(); return }
   if (e.code === 'KeyX' && !e.ctrlKey) { if (!btnCut.disabled) doCut(); return }
+  
+  if (Object.keys(shortcutKeys).includes(e.key)) {
+    if (video.src) handleTagEvent(e.key)
+    return
+  }
+
   if (!video.src) return
   switch (e.code) {
     case 'Space':      e.preventDefault(); togglePlay(); break
@@ -881,7 +934,9 @@ async function saveAnnotations() {
   try {
     await ipcRenderer.invoke('save-annotations', {
       videoPath:   clip.inputPath,
-      annotations: ds.annotations
+      annotations: ds.annotations,
+      taggedEvents: taggedEvents,
+      shortcutKeys: shortcutKeys
     })
   } catch (e) {
     console.warn('Could not save annotations:', e)
@@ -891,12 +946,55 @@ async function saveAnnotations() {
 async function loadAnnotations(videoPath) {
   try {
     const result = await ipcRenderer.invoke('load-annotations', videoPath)
+    
+    // Carregar eventos registados para este vídeo
+    taggedEvents = result.taggedEvents || []
+    if (typeof renderTaggedEvents === 'function') {
+      renderTaggedEvents()
+    }
+    
+    // Carregar atalhos de eventos para este vídeo (ou usar padrão do idioma se for novo)
+    const defaultKeys = {
+      pt: {
+        '1': 'Remate Feito',
+        '2': 'Remate Sofrido',
+        '3': 'Perda de Bola',
+        '4': 'Recuperação'
+      },
+      en: {
+        '1': 'Shot Taken',
+        '2': 'Shot Conceded',
+        '3': 'Possession Lost',
+        '4': 'Possession Recovered'
+      }
+    };
+    const lang = currentAppLang === 'pt' ? 'pt' : 'en';
+    
+    if (result.success && result.shortcutKeys && Object.keys(result.shortcutKeys).length > 0) {
+      shortcutKeys = result.shortcutKeys
+    } else {
+      shortcutKeys = JSON.parse(JSON.stringify(defaultKeys[lang]))
+      // Guardar localmente no ficheiro do vídeo o padrão inicial
+      setTimeout(() => {
+        saveShortcutNames()
+      }, 100)
+    }
+    
+    if (typeof renderShortcutList === 'function') {
+      renderShortcutList()
+    }
+    
     if (result.success && result.annotations && result.annotations.length > 0) {
       ds.annotations = result.annotations
       redraw()
       updateTimelineMarkers()
       updateAnnotationBadge()
       showToast(t('toast-load-success', '📂 {0} anotação(ões) carregada(s)', result.annotations.length), 2500)
+    } else {
+      ds.annotations = []
+      redraw()
+      updateTimelineMarkers()
+      updateAnnotationBadge()
     }
   } catch (e) {
     console.warn('Could not load annotations:', e)
@@ -1998,4 +2096,643 @@ makeDraggable(document.getElementById('drawPanel'));
 // Initial license validation check on boot
 checkLicense();
 setAppLanguage(currentAppLang);
+
+// ── Playlists & Tagging Logic (Fase 1) ────────────────────
+
+// 1. Alternar visualização dos painéis laterais (Sidebar toggles)
+if (btnTogglePlaylist && playlistSidebar) {
+  btnTogglePlaylist.addEventListener('click', () => {
+    playlistSidebar.classList.toggle('collapsed');
+    btnTogglePlaylist.classList.toggle('active');
+    setTimeout(resizeCanvas, 250);
+  });
+}
+
+if (btnToggleTagging && taggingSidebar) {
+  btnToggleTagging.addEventListener('click', () => {
+    taggingSidebar.classList.toggle('collapsed');
+    btnToggleTagging.classList.toggle('active');
+    setTimeout(resizeCanvas, 250);
+  });
+}
+
+// 2. Criar e gerir Playlists
+function loadPlaylists() {
+  if (!playlistSelect) return;
+  try {
+    playlists = JSON.parse(localStorage.getItem('fv_playlists') || '[]');
+  } catch (e) {
+    playlists = [];
+  }
+  
+  // Limpar select e popular
+  playlistSelect.innerHTML = '';
+  
+  const defaultOpt = document.createElement('option');
+  defaultOpt.value = '';
+  defaultOpt.textContent = (appTranslations[currentAppLang] && appTranslations[currentAppLang]['select-playlist-prompt']) || '-- Escolher Playlist --';
+  playlistSelect.appendChild(defaultOpt);
+  
+  playlists.forEach(pl => {
+    const opt = document.createElement('option');
+    opt.value = pl.id;
+    opt.textContent = pl.name;
+    playlistSelect.appendChild(opt);
+  });
+  
+  if (activePlaylistId) {
+    playlistSelect.value = activePlaylistId;
+  }
+  
+  updatePlaylistButtons();
+}
+
+function savePlaylists() {
+  localStorage.setItem('fv_playlists', JSON.stringify(playlists));
+}
+
+function updatePlaylistButtons() {
+  if (btnAddCurrentToPlaylist) {
+    const isSelected = !!activePlaylistId;
+    btnAddCurrentToPlaylist.disabled = !isSelected;
+  }
+}
+
+if (btnCreatePlaylist) {
+  btnCreatePlaylist.addEventListener('click', () => {
+    const plCount = playlists.length + 1;
+    const defaultName = `Playlist ${plCount}`;
+    
+    // Evitar quebra no Electron caso o prompt não seja suportado nativamente
+    let name = defaultName;
+    try {
+      if (typeof prompt !== 'undefined') {
+        const userInput = prompt("Nome da nova playlist tática:", defaultName);
+        if (userInput === null) return; // Cancelado pelo utilizador
+        if (userInput.trim()) name = userInput.trim();
+      }
+    } catch (e) {
+      console.warn("window.prompt não é suportado pelo Electron. Usando nome padrão:", defaultName);
+    }
+    
+    const newPl = {
+      id: 'playlist_' + Date.now(),
+      name: name,
+      clips: []
+    };
+    
+    playlists.push(newPl);
+    savePlaylists();
+    activePlaylistId = newPl.id;
+    loadPlaylists();
+    renderClips();
+  });
+}
+
+if (playlistSelect) {
+  playlistSelect.addEventListener('change', (e) => {
+    activePlaylistId = e.target.value;
+    updatePlaylistButtons();
+    renderClips();
+  });
+}
+
+// 3. Adicionar clip atual à playlist
+if (btnAddCurrentToPlaylist) {
+  btnAddCurrentToPlaylist.addEventListener('click', () => {
+    if (!activePlaylistId || !clip.inputPath) return;
+    if (clip.inTime === null || clip.outTime === null) {
+      showToast("❌ Define primeiro o ponto de In (I) e Out (O) na barra de tempo", 3000);
+      return;
+    }
+    
+    const t0 = Math.min(clip.inTime, clip.outTime);
+    const t1 = Math.max(clip.inTime, clip.outTime);
+    
+    const currentPl = playlists.find(p => p.id === activePlaylistId);
+    if (!currentPl) return;
+    
+    const defaultTitle = "Corte " + (currentPl.clips.length + 1);
+    let title = defaultTitle;
+    try {
+      if (typeof prompt !== 'undefined') {
+        const userInput = prompt("Título para o clip tático:", defaultTitle);
+        if (userInput === null) return; // Cancelado
+        if (userInput.trim()) title = userInput.trim();
+      }
+    } catch (e) {
+      console.warn("window.prompt não é suportado pelo Electron. Usando título padrão.");
+    }
+    
+    const clipTitle = title;
+    
+    // Clonar e ajustar os timestamps das anotações criadas antes do início do clip
+    const targetClones = JSON.parse(JSON.stringify(ds.annotations));
+    targetClones.forEach(ann => {
+      if (ann.timestamp < t0) {
+        ann.timestamp = t0;
+      }
+    });
+    
+    currentPl.clips.push({
+      id: 'clip_' + Date.now(),
+      title: clipTitle,
+      videoPath: clip.inputPath,
+      inTime: t0,
+      outTime: t1,
+      annotations: targetClones // Usar as anotações com o alinhamento de início
+    });
+    savePlaylists();
+    renderClips();
+    showToast("✅ Clip adicionado à playlist com sucesso!", 3000);
+  });
+}
+
+// 4. Renderizar lista de clips da playlist ativa
+function renderClips() {
+  if (!clipList) return;
+  clipList.innerHTML = '';
+  if (!activePlaylistId) return;
+  
+  const currentPl = playlists.find(p => p.id === activePlaylistId);
+  if (!currentPl || !currentPl.clips) return;
+  
+  currentPl.clips.forEach((cl, index) => {
+    const li = document.createElement('li');
+    li.className = 'clip-item';
+    li.dataset.id = cl.id;
+    
+    // Info
+    const info = document.createElement('div');
+    info.className = 'clip-info';
+    
+    const title = document.createElement('span');
+    title.className = 'clip-title';
+    title.textContent = `${index + 1}. ${cl.title}`;
+    
+    const time = document.createElement('span');
+    time.className = 'clip-time';
+    time.textContent = `${formatTime(cl.inTime)} → ${formatTime(cl.outTime)} (${(cl.outTime - cl.inTime).toFixed(1)}s)`;
+    
+    info.appendChild(title);
+    info.appendChild(time);
+    
+    // Ações (Eliminar)
+    const actions = document.createElement('div');
+    actions.className = 'clip-actions';
+    
+    const delBtn = document.createElement('button');
+    delBtn.className = 'clip-act-btn delete';
+    delBtn.innerHTML = '🗑️';
+    delBtn.title = "Remover da Playlist";
+    delBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (confirm(`Remover "${cl.title}" da playlist?`)) {
+        currentPl.clips.splice(index, 1);
+        savePlaylists();
+        renderClips();
+      }
+    });
+    
+    actions.appendChild(delBtn);
+    
+    li.appendChild(info);
+    li.appendChild(actions);
+    
+    // Clicar no clip da playlist para reproduzir
+    li.addEventListener('click', () => {
+      document.querySelectorAll('.clip-item').forEach(el => el.classList.remove('active'));
+      li.classList.add('active');
+      playPlaylistClip(cl);
+    });
+    
+    clipList.appendChild(li);
+  });
+}
+
+// 5. Reproduzir clip selecionado da playlist
+async function playPlaylistClip(cl) {
+  // Se for um vídeo diferente, carregar primeiro
+  if (clip.inputPath !== cl.videoPath) {
+    loadVideo(cl.videoPath);
+    // Aguardar carregamento
+    await new Promise(resolve => {
+      video.addEventListener('loadedmetadata', resolve, { once: true });
+    });
+  }
+  
+  // Posicionar timeline
+  clip.inTime = cl.inTime;
+  clip.outTime = cl.outTime;
+  video.currentTime = cl.inTime;
+  
+  // Restaurar anotações guardadas especificamente para este clip
+  ds.annotations = JSON.parse(JSON.stringify(cl.annotations || []));
+  ds.undos = [];
+  ds.redos = [];
+  
+  updateTimelineMarkers();
+  redraw();
+  
+  video.play().catch(e => {});
+}
+
+// 6. Pausa Automática Inteligente
+function checkAutoPause() {
+  if (video.paused) return;
+  
+  ds.annotations.forEach(ann => {
+    // Se o vídeo passar pelo início de uma anotação e não tiver sido pausado recentemente nesse frame
+    if (Math.abs(video.currentTime - ann.timestamp) < 0.15 && Math.abs(video.currentTime - lastPausedTime) > 1.2) {
+      video.pause();
+      lastPausedTime = video.currentTime;
+      showToast("⏸️ Pausa automática de análise", 2000);
+    }
+  });
+}
+
+// 7. Marcação de Eventos / Tagging (Hotkeys 1, 2, 3, 4)
+function handleTagEvent(key) {
+  if (!video.src || !clip.inputPath) return;
+  
+  // Obter o input de texto associado a esta tecla
+  const inputEl = document.querySelector(`.sc-name-input[data-key="${key}"]`);
+  if (!inputEl) return;
+  
+  const eventName = inputEl.value.trim() || `Evento ${key}`;
+  const now = video.currentTime;
+  
+  // Definir corte retroativo (5 segundos antes e 3 segundos depois)
+  const t0 = Math.max(0, now - 5);
+  const t1 = Math.min(video.duration, now + 3);
+  
+  const newEvent = {
+    id: 'event_' + Date.now(),
+    name: eventName,
+    time: now,
+    inTime: t0,
+    outTime: t1
+  };
+  
+  taggedEvents.push(newEvent);
+  renderTaggedEvents();
+  saveAnnotations(); // Persistir imediatamente na base de dados local do vídeo!
+  
+  // Adicionar também automaticamente à playlist ativa, caso exista uma selecionada
+  if (activePlaylistId) {
+    const currentPl = playlists.find(p => p.id === activePlaylistId);
+    if (currentPl) {
+      // Ajustar timestamps para que desenhos criados antes do início do clip comecem no início do clip!
+      const targetClones = JSON.parse(JSON.stringify(ds.annotations));
+      targetClones.forEach(ann => {
+        if (ann.timestamp < t0) {
+          ann.timestamp = t0;
+        }
+      });
+      
+      currentPl.clips.push({
+        id: 'clip_' + Date.now(),
+        title: `${eventName} (Min ${formatTime(now)})`,
+        videoPath: clip.inputPath,
+        inTime: t0,
+        outTime: t1,
+        annotations: targetClones
+      });
+      savePlaylists();
+      renderClips();
+    }
+  }
+  
+  showToast(`🏷️ Evento marcado: ${eventName}`, 3000);
+}
+
+// 8. Renderizar lista de eventos registados
+function renderTaggedEvents() {
+  if (!taggedEventsList) return;
+  taggedEventsList.innerHTML = '';
+  
+  taggedEvents.forEach((ev, index) => {
+    const li = document.createElement('li');
+    li.className = 'event-item';
+    
+    const details = document.createElement('div');
+    details.className = 'event-details';
+    
+    const nameSpan = document.createElement('span');
+    nameSpan.className = 'event-name';
+    nameSpan.textContent = ev.name;
+    
+    const time = document.createElement('span');
+    time.className = 'event-time';
+    time.textContent = `Marcado aos ${formatTime(ev.time)} (Clip: ${formatTime(ev.inTime)} → ${formatTime(ev.outTime)})`;
+    
+    details.appendChild(nameSpan);
+    details.appendChild(time);
+    
+    // Botão Lápis para Editar
+    const editBtn = document.createElement('button');
+    editBtn.className = 'clip-act-btn edit-event-btn';
+    editBtn.innerHTML = '✏️';
+    editBtn.title = "Editar Nome do Evento";
+    editBtn.style.marginLeft = '8px';
+    editBtn.style.cursor = 'pointer';
+    
+    editBtn.addEventListener('click', (e) => {
+      e.stopPropagation(); // Evitar reprodução do clip
+      
+      // Criar input in-place
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'sc-name-input';
+      input.style.fontSize = '12px';
+      input.style.padding = '2px 6px';
+      input.style.width = '160px';
+      input.maxLength = 40; // Limite de 40 caracteres
+      input.value = ev.name;
+      
+      const saveChange = () => {
+        const oldName = ev.name;
+        ev.name = input.value.trim() || ev.name;
+        
+        // Se mudou o nome, guardar alterações!
+        if (oldName !== ev.name) {
+          // Atualizar o nome correspondente na playlist também se aplicável
+          playlists.forEach(pl => {
+            pl.clips.forEach(cl => {
+              if (cl.inTime === ev.inTime && cl.outTime === ev.outTime) {
+                cl.title = `${ev.name} (Min ${formatTime(ev.time)})`;
+              }
+            });
+          });
+          
+          savePlaylists();
+          renderClips();
+          saveAnnotations(); // Persistir alteração localmente!
+        }
+        renderTaggedEvents();
+      };
+      
+      input.addEventListener('blur', saveChange);
+      input.addEventListener('keydown', (eKey) => {
+        if (eKey.key === 'Enter') {
+          saveChange();
+        }
+      });
+      
+      // Substituir o text pelo input
+      details.replaceChild(input, nameSpan);
+      input.focus();
+      input.select();
+    });
+    
+    // Botão de lixeira para remover o evento
+    const delBtn = document.createElement('button');
+    delBtn.className = 'clip-act-btn delete-event-btn';
+    delBtn.innerHTML = '🗑️';
+    delBtn.title = "Remover Evento";
+    delBtn.style.marginLeft = '6px';
+    delBtn.style.cursor = 'pointer';
+    
+    delBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (confirm(`Pretendes eliminar o evento "${ev.name}" registado?`)) {
+        taggedEvents.splice(index, 1);
+        saveAnnotations(); // Persistir a eliminação localmente!
+        renderTaggedEvents();
+      }
+    });
+    
+    li.appendChild(details);
+    li.appendChild(editBtn);
+    li.appendChild(delBtn);
+    
+    // Clicar no evento para ir para o momento dele
+    li.addEventListener('click', () => {
+      if (details.querySelector('input')) return; // se estiver a editar, ignorar clique de play
+      
+      clip.inTime = ev.inTime;
+      clip.outTime = ev.outTime;
+      video.currentTime = ev.inTime;
+      updateTimelineMarkers();
+      video.play().catch(e => {});
+    });
+    
+    taggedEventsList.appendChild(li);
+  });
+}
+
+// 9. Persistência e Geração Dinâmica dos nomes dos atalhos
+function loadShortcutNames() {
+  const defaultKeys = {
+    pt: {
+      '1': 'Remate Feito',
+      '2': 'Remate Sofrido',
+      '3': 'Perda de Bola',
+      '4': 'Recuperação'
+    },
+    en: {
+      '1': 'Shot Taken',
+      '2': 'Shot Conceded',
+      '3': 'Possession Lost',
+      '4': 'Possession Recovered'
+    },
+    es: {
+      '1': 'Tiro Realizado',
+      '2': 'Tiro Concedido',
+      '3': 'Posesión Perdida',
+      '4': 'Recuperación'
+    },
+    fr: {
+      '1': 'Tir Effectué',
+      '2': 'Tir Concédé',
+      '3': 'Ballon Perdu',
+      '4': 'Ballon Récupéré'
+    },
+    de: {
+      '1': 'Torschuss',
+      '2': 'Torschuss erlitten',
+      '3': 'Ballverlust',
+      '4': 'Balleroberung'
+    }
+  };
+  
+  let lang = currentAppLang;
+  if (!defaultKeys[lang]) lang = 'en';
+  
+  try {
+    shortcutKeys = JSON.parse(localStorage.getItem('fv_shortcut_names') || '{}');
+  } catch(e){
+    shortcutKeys = {};
+  }
+  
+  // Se estiver vazio, usar padrão conforme a língua atual
+  if (Object.keys(shortcutKeys).length === 0) {
+    shortcutKeys = JSON.parse(JSON.stringify(defaultKeys[lang]));
+    saveShortcutNames();
+  }
+  
+  renderShortcutList();
+}
+
+// Tradução dinâmica dos atalhos que mantêm o valor padrão
+function translateDefaultShortcuts(oldLang, newLang) {
+  if (oldLang === newLang) return;
+  
+  const defaultKeys = {
+    pt: {
+      '1': 'Remate Feito',
+      '2': 'Remate Sofrido',
+      '3': 'Perda de Bola',
+      '4': 'Recuperação'
+    },
+    en: {
+      '1': 'Shot Taken',
+      '2': 'Shot Conceded',
+      '3': 'Possession Lost',
+      '4': 'Possession Recovered'
+    },
+    es: {
+      '1': 'Tiro Realizado',
+      '2': 'Tiro Concedido',
+      '3': 'Posesión Perdida',
+      '4': 'Recuperación'
+    },
+    fr: {
+      '1': 'Tir Effectué',
+      '2': 'Tir Concédé',
+      '3': 'Ballon Perdu',
+      '4': 'Ballon Récupéré'
+    },
+    de: {
+      '1': 'Torschuss',
+      '2': 'Torschuss erlitten',
+      '3': 'Ballverlust',
+      '4': 'Balleroberung'
+    }
+  };
+  
+  let changed = false;
+  
+  ['1', '2', '3', '4'].forEach(key => {
+    if (shortcutKeys[key]) {
+      const val = shortcutKeys[key].trim();
+      const oldDefault = defaultKeys[oldLang] ? defaultKeys[oldLang][key] : null;
+      const newDefault = defaultKeys[newLang] ? defaultKeys[newLang][key] : null;
+      
+      // Se o utilizador não personalizou este atalho, traduzimos automaticamente (insensível a maiúsculas)
+      if (newDefault && oldDefault && (val.toLowerCase() === oldDefault.toLowerCase() || val === '')) {
+        shortcutKeys[key] = newDefault;
+        changed = true;
+      }
+    }
+  });
+  
+  if (changed) {
+    saveShortcutNames();
+    renderShortcutList();
+  }
+}
+
+function saveShortcutNames() {
+  localStorage.setItem('fv_shortcut_names', JSON.stringify(shortcutKeys));
+  saveAnnotations(); // Persistir no ficheiro do vídeo!
+}
+
+function renderShortcutList() {
+  if (!tagShortcutsList) return;
+  tagShortcutsList.innerHTML = '';
+  
+  // Ordenar chaves numericamente
+  const sortedKeys = Object.keys(shortcutKeys).sort((a, b) => parseInt(a) - parseInt(b));
+  
+  sortedKeys.forEach(key => {
+    const value = shortcutKeys[key];
+    
+    const div = document.createElement('div');
+    div.className = 'shortcut-item';
+    
+    const span = document.createElement('span');
+    span.className = 'sc-key';
+    span.textContent = key;
+    
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'sc-name-input';
+    input.dataset.key = key;
+    input.value = value;
+    
+    input.addEventListener('change', (e) => {
+      shortcutKeys[key] = e.target.value.trim() || `Evento ${key}`;
+      saveShortcutNames();
+    });
+    
+    // Botão de eliminar atalho
+    const delBtn = document.createElement('button');
+    delBtn.className = 'clip-act-btn delete';
+    delBtn.innerHTML = '×';
+    delBtn.title = "Remover Atalho";
+    delBtn.style.padding = '0 6px';
+    delBtn.style.fontSize = '14px';
+    delBtn.style.fontWeight = 'bold';
+    
+    delBtn.addEventListener('click', () => {
+      if (Object.keys(shortcutKeys).length <= 1) {
+        showToast("⚠️ Tens de ter pelo menos 1 atalho configurado", 3000);
+        return;
+      }
+      if (confirm(`Remover o atalho "${key}" (${value})?`)) {
+        delete shortcutKeys[key];
+        saveShortcutNames();
+        renderShortcutList();
+      }
+    });
+    
+    div.appendChild(span);
+    div.appendChild(input);
+    div.appendChild(delBtn);
+    tagShortcutsList.appendChild(div);
+  });
+}
+
+// Ouvir clique no botão "+" para adicionar novo atalho
+if (btnAddTagShortcut) {
+  btnAddTagShortcut.addEventListener('click', () => {
+    // Procurar o próximo número disponível de 1 a 9
+    let nextKey = null;
+    for (let i = 1; i <= 9; i++) {
+      if (!shortcutKeys[i.toString()]) {
+        nextKey = i.toString();
+        break;
+      }
+    }
+    
+    if (!nextKey) {
+      showToast("⚠️ Limite atingido: Só podes configurar atalhos de 1 a 9", 4000);
+      return;
+    }
+    
+    const defaultName = `Novo Evento ${nextKey}`;
+    
+    // Adiciona diretamente com o nome padrão e foca para renomeação,
+    // evitando diálogos de prompt que o Electron não suporta.
+    shortcutKeys[nextKey] = defaultName;
+    saveShortcutNames();
+    renderShortcutList();
+    
+    // Focar e selecionar automaticamente o novo campo de texto para o utilizador escrever
+    setTimeout(() => {
+      const inputEl = document.querySelector(`.sc-name-input[data-key="${nextKey}"]`);
+      if (inputEl) {
+        inputEl.focus();
+        inputEl.select();
+      }
+    }, 50);
+    
+    showToast(`✅ Atalho (Tecla ${nextKey}) adicionado! Escreva o nome abaixo.`, 3000);
+  });
+}
+
+// Inicializar novas funcionalidades
+loadPlaylists();
+loadShortcutNames();
 

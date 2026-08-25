@@ -43,112 +43,177 @@
     </div>
 
     <!-- Player -->
+    <!-- Player -->
     <div class="player-wrap" id="playerWrap" style="display:none">
 
-      <video id="video" tabindex="-1"></video>
-
-      <!-- Drawing canvas -->
-      <canvas id="drawCanvas"></canvas>
-
-      <!-- Click overlay -->
-      <div class="video-overlay" id="videoOverlay"></div>
-
-      <!-- Play/pause flash -->
-      <div class="play-flash" id="playFlash">&#9654;</div>
-
-      <!-- Toast notification -->
-      <div class="toast" id="toast"></div>
-
-      <!-- Drawing toolbar -->
-      <div class="draw-panel" id="drawPanel">
-        <div class="dp-label" data-i18n="dp-tools">Ferramentas</div>
-        <div class="dp-tools-grid">
-          <button class="dp-tool active" data-tool="pencil" data-i18n-title="title-pencil">&#9998;</button>
-          <button class="dp-tool" data-tool="line"   data-i18n-title="title-line">&#9585;</button>
-          <button class="dp-tool" data-tool="dashed" data-i18n-title="title-dashed">- -</button>
-          <button class="dp-tool" data-tool="arrow"  data-i18n-title="title-arrow">&#10145;</button>
-          <button class="dp-tool" data-tool="circle" data-i18n-title="title-circle">&#9711;</button>
-          <button class="dp-tool" data-tool="rect"   data-i18n-title="title-rect">&#9645;</button>
-          <button class="dp-tool" data-tool="track"  data-i18n-title="title-track">🎯</button>
+      <!-- Playlist Sidebar (Left) -->
+      <div class="sidebar-panel left collapsed" id="playlistSidebar">
+        <div class="sb-header">
+          <span class="sb-title" data-i18n="sb-playlist-title">Playlists Táticas</span>
+          <button class="sb-add-btn" id="btnCreatePlaylist" title="Criar Playlist">+</button>
         </div>
-        <div class="dp-sep"></div>
-        <div class="dp-label" data-i18n="dp-color">Cor</div>
-        <div class="dp-colors">
-          <div class="dp-color active" data-color="#ffffff" style="background:#ffffff"></div>
-          <div class="dp-color"        data-color="#ffee33" style="background:#ffee33"></div>
-          <div class="dp-color"        data-color="#ff4444" style="background:#ff4444"></div>
-          <div class="dp-color"        data-color="#44ff88" style="background:#44ff88"></div>
-          <div class="dp-color"        data-color="#4488ff" style="background:#4488ff"></div>
-          <div class="dp-color"        data-color="#ff8844" style="background:#ff8844"></div>
-          <div class="dp-color"        data-color="#dd44ff" style="background:#dd44ff"></div>
-          <div class="dp-color"        data-color="#111111" style="background:#111111;border-color:#555"></div>
-        </div>
-        <div class="dp-sep"></div>
-        <div class="dp-label" data-i18n="dp-width">Espessura</div>
-        <div class="dp-widths">
-          <button class="dp-width active" data-width="2"><span class="wline" style="height:2px"></span></button>
-          <button class="dp-width" data-width="4"><span class="wline" style="height:4px"></span></button>
-          <button class="dp-width" data-width="8"><span class="wline" style="height:8px"></span></button>
-        </div>
-        <div class="dp-sep"></div>
-        <div class="dp-label" data-i18n="dp-duration">Dura&#231;&#227;o</div>
-        <div class="dp-durations">
-          <button class="dp-dur" data-dur="2">2s</button>
-          <button class="dp-dur active" data-dur="4">4s</button>
-          <button class="dp-dur" data-dur="8">8s</button>
-          <button class="dp-dur" data-dur="-1">&#8734;</button>
-        </div>
-        <div class="dp-sep"></div>
-        <div class="dp-actions">
-          <button class="dp-action" id="btnUndo" data-i18n="dp-undo">&#8617; Desfazer</button>
-          <button class="dp-action" id="btnRedo" data-i18n="dp-redo">&#8618; Refazer</button>
-          <button class="dp-action danger" id="btnClearAll" data-i18n="dp-clear">&#128465; Limpar</button>
+        <div class="sb-content">
+          <div class="playlist-selector-wrap">
+            <select class="playlist-select" id="playlistSelect">
+              <option value="" data-i18n="select-playlist-prompt">-- Escolher Playlist --</option>
+            </select>
+          </div>
+          <button class="btn-open" id="btnAddCurrentToPlaylist" style="width: 100%; margin-top: 6px; font-size: 11px; padding: 6px 12px;" disabled data-i18n="sb-add-current-btn">+ Adicionar Seleção Atual</button>
+          <div class="sb-label" data-i18n="sb-clips-label">Clips na Playlist</div>
+          <ul class="clip-list" id="clipList">
+            <!-- Dynamic clips list -->
+          </ul>
         </div>
       </div>
 
-      <!-- Controls bar -->
-      <div class="controls" id="controls">
-        <!-- Progress bar -->
-        <div class="progress-wrap">
-          <span class="time-current" id="timeCurrent">0:00</span>
-          <div class="progress-bar" id="progressBar">
-            <!-- Clip selection zone -->
-            <div class="clip-zone" id="clipZone"></div>
-            <div class="clip-marker in"  id="clipInMarker"></div>
-            <div class="clip-marker out" id="clipOutMarker"></div>
-            <div class="progress-fill"  id="progressFill"></div>
-            <div class="progress-thumb" id="progressThumb"></div>
+      <!-- Center Player Area -->
+      <div class="player-center">
+        <video id="video" tabindex="-1"></video>
+
+        <!-- Drawing canvas -->
+        <canvas id="drawCanvas"></canvas>
+
+        <!-- Click overlay -->
+        <div class="video-overlay" id="videoOverlay"></div>
+
+        <!-- Play/pause flash -->
+        <div class="play-flash" id="playFlash">&#9654;</div>
+
+        <!-- Toast notification -->
+        <div class="toast" id="toast"></div>
+
+        <!-- Drawing toolbar -->
+        <div class="draw-panel" id="drawPanel">
+          <div class="dp-label" id="dpToolsLabel" title="Ferramentas de Desenho">🛠️</div>
+          <div class="dp-tools-grid">
+            <button class="dp-tool active" data-tool="pencil" data-i18n-title="title-pencil">&#9998;</button>
+            <button class="dp-tool" data-tool="line"   data-i18n-title="title-line">&#9585;</button>
+            <button class="dp-tool" data-tool="dashed" data-i18n-title="title-dashed">- -</button>
+            <button class="dp-tool" data-tool="arrow"  data-i18n-title="title-arrow">&#10145;</button>
+            <button class="dp-tool" data-tool="circle" data-i18n-title="title-circle">&#9711;</button>
+            <button class="dp-tool" data-tool="rect"   data-i18n-title="title-rect">&#9645;</button>
+            <button class="dp-tool" data-tool="track"  data-i18n-title="title-track">🎯</button>
           </div>
-          <span class="time-total" id="timeTotal">0:00</span>
+          <div class="dp-sep"></div>
+          <div class="dp-label" data-i18n="dp-color">Cor</div>
+          <div class="dp-colors">
+            <div class="dp-color active" data-color="#ffffff" style="background:#ffffff"></div>
+            <div class="dp-color"        data-color="#ffee33" style="background:#ffee33"></div>
+            <div class="dp-color"        data-color="#ff4444" style="background:#ff4444"></div>
+            <div class="dp-color"        data-color="#44ff88" style="background:#44ff88"></div>
+            <div class="dp-color"        data-color="#4488ff" style="background:#4488ff"></div>
+            <div class="dp-color"        data-color="#ff8844" style="background:#ff8844"></div>
+            <div class="dp-color"        data-color="#dd44ff" style="background:#dd44ff"></div>
+            <div class="dp-color"        data-color="#111111" style="background:#111111;border-color:#555"></div>
+          </div>
+          <div class="dp-sep"></div>
+          <div class="dp-label" data-i18n="dp-width">Espessura</div>
+          <div class="dp-widths">
+            <button class="dp-width active" data-width="2"><span class="wline" style="height:2px"></span></button>
+            <button class="dp-width" data-width="4"><span class="wline" style="height:4px"></span></button>
+            <button class="dp-width" data-width="8"><span class="wline" style="height:8px"></span></button>
+          </div>
+          <div class="dp-sep"></div>
+          <div class="dp-label" data-i18n="dp-duration">Duração</div>
+          <div class="dp-durations">
+            <button class="dp-dur" data-dur="2">2s</button>
+            <button class="dp-dur active" data-dur="4">4s</button>
+            <button class="dp-dur" data-dur="8">8s</button>
+            <button class="dp-dur" data-dur="-1">&#8734;</button>
+          </div>
+          <div class="dp-sep"></div>
+          <div class="dp-actions">
+            <button class="dp-action" id="btnUndo" title="Desfazer (Ctrl+Z)">↺</button>
+            <button class="dp-action" id="btnRedo" title="Refazer (Ctrl+Y)">↻</button>
+            <button class="dp-action danger" id="btnClearAll" title="Limpar Tudo">🗑️</button>
+          </div>
         </div>
 
-        <!-- Buttons row -->
-        <div class="btn-row">
-          <div class="btn-left">
-            <button class="ctrl-btn" id="btnOpen"      data-i18n-title="title-open">&#128194;</button>
-            <button class="ctrl-btn" id="btnPlayPause" data-i18n-title="title-play">&#9654;</button>
-            <button class="ctrl-btn" id="btnStop"      data-i18n-title="title-stop">&#9209;</button>
-            <div class="volume-wrap">
-              <button class="ctrl-btn" id="btnMute" data-i18n-title="title-mute">&#128266;</button>
-              <input type="range" id="volumeSlider" min="0" max="1" step="0.02" value="1" />
+        <!-- Controls bar -->
+        <div class="controls" id="controls">
+          <!-- Progress bar -->
+          <div class="progress-wrap">
+            <span class="time-current" id="timeCurrent">0:00</span>
+            <div class="progress-bar" id="progressBar">
+              <!-- Clip selection zone -->
+              <div class="clip-zone" id="clipZone"></div>
+              <div class="clip-marker in"  id="clipInMarker"></div>
+              <div class="clip-marker out" id="clipOutMarker"></div>
+              <div class="progress-fill"  id="progressFill"></div>
+              <div class="progress-thumb" id="progressThumb"></div>
+            </div>
+            <span class="time-total" id="timeTotal">0:00</span>
+          </div>
+
+          <!-- Buttons row -->
+          <div class="btn-row">
+            <div class="btn-left">
+              <button class="ctrl-btn" id="btnTogglePlaylist" data-i18n-title="title-playlist">☰</button>
+              <button class="ctrl-btn" id="btnOpen"      data-i18n-title="title-open">&#128194;</button>
+              <button class="ctrl-btn" id="btnPlayPause" data-i18n-title="title-play">&#9654;</button>
+              <button class="ctrl-btn" id="btnStop"      data-i18n-title="title-stop">&#9209;</button>
+              <div class="volume-wrap">
+                <button class="ctrl-btn" id="btnMute" data-i18n-title="title-mute">&#128266;</button>
+                <input type="range" id="volumeSlider" min="0" max="1" step="0.02" value="1" />
+              </div>
+            </div>
+            <div class="btn-center">
+              <span class="filename" id="filenameLabel">&#8212;</span>
+            </div>
+            <div class="btn-right">
+              <button class="ctrl-btn" id="btnSpeed"      data-i18n-title="title-speed">1x</button>
+
+              <!-- Clip controls -->
+              <div class="clip-sep"></div>
+              <button class="ctrl-btn clip-btn" id="btnClipIn"  data-i18n-title="title-clipin">&#9646;I</button>
+              <button class="ctrl-btn clip-btn" id="btnClipOut" data-i18n-title="title-clipout">O&#9646;</button>
+              <button class="ctrl-btn cut-btn"  id="btnCut"     data-i18n-title="title-cut" disabled>&#9986;</button>
+              <div class="clip-sep"></div>
+
+              <button class="ctrl-btn" id="btnEditMode"   data-i18n-title="title-edit">&#9998;</button>
+              <button class="ctrl-btn" id="btnToggleTagging" data-i18n-title="title-tagging">🏷️</button>
+              <button class="ctrl-btn" id="btnFullscreen" data-i18n-title="title-fs">&#9974;</button>
             </div>
           </div>
-          <div class="btn-center">
-            <span class="filename" id="filenameLabel">&#8212;</span>
-          </div>
-          <div class="btn-right">
-            <button class="ctrl-btn" id="btnSpeed"      data-i18n-title="title-speed">1x</button>
+        </div>
+      </div>
 
-            <!-- Clip controls -->
-            <div class="clip-sep"></div>
-            <button class="ctrl-btn clip-btn" id="btnClipIn"  data-i18n-title="title-clipin">&#9646;I</button>
-            <button class="ctrl-btn clip-btn" id="btnClipOut" data-i18n-title="title-clipout">O&#9646;</button>
-            <button class="ctrl-btn cut-btn"  id="btnCut"     data-i18n-title="title-cut" disabled>&#9986;</button>
-            <div class="clip-sep"></div>
-
-            <button class="ctrl-btn" id="btnEditMode"   data-i18n-title="title-edit">&#9998;</button>
-            <button class="ctrl-btn" id="btnFullscreen" data-i18n-title="title-fs">&#9974;</button>
+      <!-- Tagging Sidebar (Right) -->
+      <div class="sidebar-panel right collapsed" id="taggingSidebar">
+        <div class="sb-header">
+          <span class="sb-title" data-i18n="sb-tagging-title">Painel de Eventos</span>
+          <button class="sb-add-btn" id="btnAddTagShortcut" title="Adicionar Atalho">+</button>
+        </div>
+        <div class="sb-content">
+          <div class="tag-settings">
+            <div class="sb-label" data-i18n="sb-tag-config">Configurar Atalhos</div>
+            <div class="tag-shortcuts-list" id="tagShortcutsList">
+              <div class="shortcut-item">
+                <span class="sc-key">1</span>
+                <input type="text" class="sc-name-input" data-key="1" value="Remate" />
+              </div>
+              <div class="shortcut-item">
+                <span class="sc-key">2</span>
+                <input type="text" class="sc-name-input" data-key="2" value="Passe" />
+              </div>
+              <div class="shortcut-item">
+                <span class="sc-key">3</span>
+                <input type="text" class="sc-name-input" data-key="3" value="Perda de Bola" />
+              </div>
+              <div class="shortcut-item">
+                <span class="sc-key">4</span>
+                <input type="text" class="sc-name-input" data-key="4" value="Recuperação" />
+              </div>
+            </div>
+            <div class="tag-info" data-i18n="tag-info-desc">
+              Pressione as teclas no teclado para marcar eventos retroativamente (5s antes a 3s depois).
+            </div>
           </div>
+          <div class="sb-sep"></div>
+          <div class="sb-label" data-i18n="sb-tagged-events">Eventos Registados</div>
+          <ul class="tagged-events-list" id="taggedEventsList">
+            <!-- Dynamic events list -->
+          </ul>
         </div>
       </div>
 
