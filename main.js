@@ -257,6 +257,47 @@ function createWindow() {
       return { success: false, error: err.message }
     }
   })
+
+  // ── Transcode unsupported video to standard MP4 (H.264/AAC) ──────────
+  ipcMain.handle('transcode-video', async (event, { inputPath }) => {
+    return new Promise((resolve) => {
+      const tempDir = path.join(app.getPath('userData'), 'temp_videos')
+      if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true })
+      
+      const fileKey = Buffer.from(inputPath).toString('hex').substring(0, 16) + '_' + Date.now() + '.mp4'
+      const outputPath = path.join(tempDir, fileKey)
+
+      let lastPercent = -1;
+      ffmpeg(inputPath)
+        .setFfmpegPath(ffmpegStatic)
+        .output(outputPath)
+        .videoCodec('libx264')
+        .audioCodec('aac')
+        .outputOptions([
+          '-preset ultrafast',
+          '-crf 23',
+          '-pix_fmt yuv420p'
+        ])
+        .on('start', cmd => console.log('FFmpeg transcoding started:', cmd))
+        .on('progress', progress => {
+          if (progress.percent !== undefined) {
+            const percent = Math.floor(progress.percent)
+            if (percent !== lastPercent) {
+              lastPercent = percent
+              event.sender.send('transcode-progress', { percent })
+            }
+          }
+        })
+        .on('end', () => {
+          resolve({ success: true, outputPath })
+        })
+        .on('error', err => {
+          console.error('FFmpeg transcoding error:', err)
+          resolve({ success: false, error: err.message })
+        })
+        .run()
+    })
+  })
 }
 
 // ── Native HTTPS POST Helper (JSON) ──────────────────────────────────
@@ -297,7 +338,18 @@ function postJSON(url, data) {
   })
 }
 
-app.whenReady().then(createWindow)
+app.whenReady().then(() => {
+  // Cleanup old temp videos on startup
+  try {
+    const tempDir = path.join(app.getPath('userData'), 'temp_videos')
+    if (fs.existsSync(tempDir)) {
+      fs.rmSync(tempDir, { recursive: true, force: true })
+    }
+  } catch (err) {
+    console.error('Failed to cleanup temp videos directory on startup:', err)
+  }
+  createWindow()
+})
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit()

@@ -607,6 +607,27 @@ let scrubbing = false
 // ── Clip state ────────────────────────────────────────────
 const clip = { inputPath: null, inTime: null, outTime: null }
 
+const NATIVE_FORMATS = ['.mp4', '.webm', '.mkv', '.ogg']
+let currentPlaybackPath = null
+let lastTranscodedTempPath = null
+let isTranscoding = false
+
+function cleanupLastTranscodedFile() {
+  if (lastTranscodedTempPath) {
+    try {
+      const fs = require('fs')
+      if (fs.existsSync(lastTranscodedTempPath)) {
+        fs.unlink(lastTranscodedTempPath, (err) => {
+          if (err) console.warn('Failed to delete temp video file:', err)
+        })
+      }
+    } catch (e) {
+      console.warn('Error cleaning up temp video file:', e)
+    }
+    lastTranscodedTempPath = null
+  }
+}
+
 // ── Open file ─────────────────────────────────────────────
 async function openFile() {
   const filePath = await ipcRenderer.invoke('open-file-dialog')
@@ -615,13 +636,8 @@ async function openFile() {
 }
 
 function loadVideo(filePath) {
-  const fileUrl = 'file:///' + filePath.replace(/\\/g, '/')
-  video.src = fileUrl
-  video.load()
-  video.play()
-  filenameLabel.textContent = path.basename(filePath)
-  emptyState.style.display  = 'none'
-  playerWrap.style.display  = 'flex'
+  // Clean up any previous transcoded temp file
+  cleanupLastTranscodedFile()
 
   clip.inputPath = filePath
   clip.inTime    = null
@@ -633,8 +649,64 @@ function loadVideo(filePath) {
   updateTimelineMarkers()
   updateAnnotationBadge()
   setTimeout(resizeCanvas, 100)
-  // Auto-load annotations if they exist for this video
-  setTimeout(() => loadAnnotations(filePath), 400)
+
+  // Set filename and display player
+  filenameLabel.textContent = path.basename(filePath)
+  emptyState.style.display  = 'none'
+  playerWrap.style.display  = 'flex'
+
+  const ext = path.extname(filePath).toLowerCase()
+  if (NATIVE_FORMATS.includes(ext)) {
+    currentPlaybackPath = filePath
+    const fileUrl = 'file:///' + filePath.replace(/\\/g, '/')
+    video.src = fileUrl
+    video.load()
+    video.play()
+    
+    // Auto-load annotations if they exist for this video
+    setTimeout(() => loadAnnotations(filePath), 400)
+  } else {
+    startTranscoding(filePath)
+  }
+}
+
+async function startTranscoding(filePath) {
+  if (isTranscoding) return
+  isTranscoding = true
+  
+  showToast('⏳ A preparar vídeo...', 0)
+  
+  const progressListener = (event, { percent }) => {
+    showToast(`⏳ A converter vídeo para formato compatível (${percent}%)...`, 0)
+  }
+  ipcRenderer.on('transcode-progress', progressListener)
+  
+  try {
+    const res = await ipcRenderer.invoke('transcode-video', { inputPath: filePath })
+    ipcRenderer.removeListener('transcode-progress', progressListener)
+    isTranscoding = false
+    
+    if (res.success) {
+      currentPlaybackPath = res.outputPath
+      lastTranscodedTempPath = res.outputPath
+      
+      const fileUrl = 'file:///' + res.outputPath.replace(/\\/g, '/')
+      video.src = fileUrl
+      video.load()
+      video.play()
+      
+      showToast('✅ Vídeo carregado com sucesso!', 3000)
+      
+      // Auto-load annotations
+      setTimeout(() => loadAnnotations(filePath), 400)
+    } else {
+      showToast('❌ Erro ao converter vídeo: ' + res.error, 5000)
+    }
+  } catch (err) {
+    ipcRenderer.removeListener('transcode-progress', progressListener)
+    isTranscoding = false
+    showToast('❌ Falha na transcodificação: ' + err.message, 5000)
+  }
 }
 
 btnOpen.addEventListener('click', openFile)
@@ -665,6 +737,16 @@ function flashIcon() {
 video.addEventListener('play',  () => { btnPlayPause.textContent = '\u23F8'; startRenderLoop() })
 video.addEventListener('pause', () => { btnPlayPause.textContent = '\u25B6'; stopRenderLoop() })
 video.addEventListener('ended', stopRenderLoop)
+video.addEventListener('error', async () => {
+  if (clip.inputPath && currentPlaybackPath === clip.inputPath && !isTranscoding) {
+    console.warn("Video element failed to play original file. Falling back to transcoding.")
+    await startTranscoding(clip.inputPath)
+  } else {
+    const err = video.error
+    const msg = err ? `Código ${err.code}: ${err.message || 'Erro de descodificação'}` : 'Erro desconhecido'
+    showToast('❌ Erro ao reproduzir vídeo: ' + msg, 5000)
+  }
+})
 
 // ── RAF render loop ───────────────────────────────────────
 let rafId = null
@@ -1296,7 +1378,7 @@ canvas.addEventListener('mouseup', async e => {
         }
 
         const result = await ipcRenderer.invoke('track-player', {
-          videoPath: clip.inputPath,
+          videoPath: currentPlaybackPath || clip.inputPath,
           startTime: video.currentTime || 0,
           duration: trackDuration,
           bbox: { x: normX, y: normY, w: normW, h: normH }
