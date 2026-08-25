@@ -53,10 +53,12 @@
           <button class="sb-add-btn" id="btnCreatePlaylist" title="Criar Playlist">+</button>
         </div>
         <div class="sb-content">
-          <div class="playlist-selector-wrap">
-            <select class="playlist-select" id="playlistSelect">
+          <div class="playlist-selector-wrap" style="display: flex; gap: 4px; align-items: center; width: 100%;">
+            <select class="playlist-select" id="playlistSelect" style="flex: 1; min-width: 0;">
               <option value="" data-i18n="select-playlist-prompt">-- Escolher Playlist --</option>
             </select>
+            <button class="sb-add-btn" id="btnRenamePlaylist" title="Editar Nome" style="display: none; font-size: 11px; flex-shrink: 0; width: 26px; height: 26px;">✏️</button>
+            <button class="sb-add-btn" id="btnDeletePlaylist" title="Eliminar Playlist" style="display: none; font-size: 11px; flex-shrink: 0; width: 26px; height: 26px; background: rgba(229, 9, 20, 0.15); color: #e50914;">🗑️</button>
           </div>
           <button class="btn-open" id="btnAddCurrentToPlaylist" style="width: 100%; margin-top: 6px; font-size: 11px; padding: 6px 12px;" disabled data-i18n="sb-add-current-btn">+ Adicionar Seleção Atual</button>
           <div class="sb-label" data-i18n="sb-clips-label">Clips na Playlist</div>

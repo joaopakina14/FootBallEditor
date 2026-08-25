@@ -553,6 +553,8 @@ const playlistSidebar        = document.getElementById('playlistSidebar')
 const taggingSidebar         = document.getElementById('taggingSidebar')
 const btnCreatePlaylist      = document.getElementById('btnCreatePlaylist')
 const playlistSelect         = document.getElementById('playlistSelect')
+const btnRenamePlaylist      = document.getElementById('btnRenamePlaylist')
+const btnDeletePlaylist      = document.getElementById('btnDeletePlaylist')
 const clipList               = document.getElementById('clipList')
 const tagShortcutsList       = document.getElementById('tagShortcutsList')
 const taggedEventsList       = document.getElementById('taggedEventsList')
@@ -2206,9 +2208,15 @@ function savePlaylists() {
 }
 
 function updatePlaylistButtons() {
+  const isSelected = !!activePlaylistId;
   if (btnAddCurrentToPlaylist) {
-    const isSelected = !!activePlaylistId;
     btnAddCurrentToPlaylist.disabled = !isSelected;
+  }
+  if (btnRenamePlaylist) {
+    btnRenamePlaylist.style.display = isSelected ? 'flex' : 'none';
+  }
+  if (btnDeletePlaylist) {
+    btnDeletePlaylist.style.display = isSelected ? 'flex' : 'none';
   }
 }
 
@@ -2248,6 +2256,47 @@ if (playlistSelect) {
     activePlaylistId = e.target.value;
     updatePlaylistButtons();
     renderClips();
+  });
+}
+
+if (btnRenamePlaylist) {
+  btnRenamePlaylist.addEventListener('click', () => {
+    if (!activePlaylistId) return;
+    const currentPl = playlists.find(p => p.id === activePlaylistId);
+    if (!currentPl) return;
+    
+    let newName = currentPl.name;
+    try {
+      if (typeof prompt !== 'undefined') {
+        const userInput = prompt("Novo nome para a playlist:", currentPl.name);
+        if (userInput === null) return; // Cancelado
+        if (userInput.trim()) newName = userInput.trim();
+      }
+    } catch (e) {
+      console.warn("window.prompt não é suportado pelo Electron.");
+    }
+    
+    if (newName !== currentPl.name) {
+      currentPl.name = newName;
+      savePlaylists();
+      loadPlaylists();
+    }
+  });
+}
+
+if (btnDeletePlaylist) {
+  btnDeletePlaylist.addEventListener('click', () => {
+    if (!activePlaylistId) return;
+    const currentPl = playlists.find(p => p.id === activePlaylistId);
+    if (!currentPl) return;
+    
+    if (confirm(`Tens a certeza que pretendes eliminar a playlist "${currentPl.name}" e todos os seus clips?`)) {
+      playlists = playlists.filter(p => p.id !== activePlaylistId);
+      activePlaylistId = null;
+      savePlaylists();
+      loadPlaylists();
+      renderClips();
+    }
   });
 }
 
@@ -2560,7 +2609,7 @@ function renderTaggedEvents() {
     li.appendChild(editBtn);
     li.appendChild(delBtn);
     
-    // Clicar no evento para ir para o momento dele
+    // Clicar no evento para ir para o momento dele e opcionalmente encaminhar para a playlist
     li.addEventListener('click', () => {
       if (details.querySelector('input')) return; // se estiver a editar, ignorar clique de play
       
@@ -2569,6 +2618,38 @@ function renderTaggedEvents() {
       video.currentTime = ev.inTime;
       updateTimelineMarkers();
       video.play().catch(e => {});
+      
+      // Se houver uma playlist ativa, adicionar o evento à playlist
+      if (activePlaylistId) {
+        const currentPl = playlists.find(p => p.id === activePlaylistId);
+        if (currentPl) {
+          const exists = currentPl.clips.some(cl => cl.inTime === ev.inTime && cl.outTime === ev.outTime && cl.videoPath === (clip.inputPath || ''));
+          if (!exists) {
+            const eventAnnotations = JSON.parse(JSON.stringify(ds.annotations || [])).filter(ann => ann.timestamp >= ev.inTime && ann.timestamp <= ev.outTime);
+            currentPl.clips.push({
+              id: 'clip_' + Date.now(),
+              title: `${ev.name} (Min ${formatTime(ev.time)})`,
+              videoPath: clip.inputPath || '',
+              inTime: ev.inTime,
+              outTime: ev.outTime,
+              annotations: eventAnnotations
+            });
+            savePlaylists();
+            renderClips();
+            showToast("✅ Evento adicionado à playlist!", 2000);
+          } else {
+            showToast("ℹ️ Este evento já está na playlist", 2000);
+          }
+        }
+        
+        // Efeito de flash verde
+        li.classList.remove('added-flash');
+        void li.offsetWidth; // forçar reflow
+        li.classList.add('added-flash');
+        setTimeout(() => {
+          li.classList.remove('added-flash');
+        }, 800);
+      }
     });
     
     taggedEventsList.appendChild(li);

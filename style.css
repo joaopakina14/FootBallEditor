@@ -971,3 +971,19 @@ video { flex: 1; width: 100%; height: calc(100% - var(--bar-h)); object-fit: con
   gap: 2px;
 }
 
+/* Efeito de flash verde nos itens de evento ao carregar/adicionar à playlist */
+@keyframes greenFlash {
+  0% {
+    background-color: rgba(68, 221, 136, 0.35) !important;
+    box-shadow: 0 0 12px rgba(68, 221, 136, 0.4) inset, 0 0 8px rgba(68, 221, 136, 0.2);
+  }
+  100% {
+    background-color: transparent;
+    box-shadow: none;
+  }
+}
+
+.event-item.added-flash {
+  animation: greenFlash 0.8s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+}
+
