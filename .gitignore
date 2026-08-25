@@ -30,3 +30,6 @@ npm-debug.log*
 # Local Code Signing Certificates
 fieldvision_test.pfx
 fieldvision_test.cer
+
+# Video folder (local testing)
+videos/
