@@ -1946,9 +1946,13 @@ function makeDraggable(el) {
     el.style.top = currentTop + 'px';
     el.style.bottom = 'auto';
     el.style.right = 'auto';
+    el.style.transform = 'none';
     
-    grabOffsetX = e.clientX - el.offsetLeft;
-    grabOffsetY = e.clientY - el.offsetTop;
+    // grabOffset em coordenadas relativas ao player-center
+    const playerCenter = document.querySelector('.player-center');
+    const pcRect = playerCenter ? playerCenter.getBoundingClientRect() : { left: 0, top: 0 };
+    grabOffsetX = (e.clientX - pcRect.left) - el.offsetLeft;
+    grabOffsetY = (e.clientY - pcRect.top) - el.offsetTop;
     
     document.addEventListener('mouseup', closeDragElement);
     document.addEventListener('mousemove', elementDrag);
@@ -1957,57 +1961,56 @@ function makeDraggable(el) {
   function elementDrag(e) {
     e.preventDefault();
     
-    const playerWrap = document.getElementById('playerWrap');
-    const playerRect = playerWrap.getBoundingClientRect();
+    const playerCenter = document.querySelector('.player-center');
+    if (!playerCenter) return;
+    const playerRect = playerCenter.getBoundingClientRect();
     const controlsEl = document.getElementById('controls');
+    if (!controlsEl) return;
     const controlsRect = controlsEl.getBoundingClientRect();
     
     // Altura útil da área do player (excluindo a barra de controlos do fundo)
     const activeHeight = controlsRect.top - playerRect.top;
     
-    const snapThreshold = 100; // Pixels de distância das bordas para colar
+    const snapThreshold = 80; // Pixels de distância das bordas do player-center para colar
     
     const mouseX = e.clientX;
     const mouseY = e.clientY;
     
-    // Converter coordenadas do cursor para o espaço local do playerWrap
+    // Converter coordenadas do cursor para o espaço local do player-center
     const localMouseX = mouseX - playerRect.left;
     const localMouseY = mouseY - playerRect.top;
     
-    // Zonas de snap ativadas apenas pela coordenada absoluta do cursor do rato no viewport
-    const closeToLeft = mouseX < snapThreshold;
-    const closeToRight = mouseX > window.innerWidth - snapThreshold;
-    const closeToTop = mouseY < playerRect.top + snapThreshold;
-    const closeToBottom = mouseY > controlsRect.top - snapThreshold;
+    // Snap zones relativas ao player-center (não ao window!)
+    const closeToLeft   = localMouseX < snapThreshold;
+    const closeToRight  = localMouseX > playerRect.width - snapThreshold;
+    const closeToTop    = localMouseY < snapThreshold;
+    const closeToBottom = localMouseY > activeHeight - snapThreshold;
     
-    // Distâncias do cursor do rato às margens correspondentes
-    let distLeft = mouseX;
-    let distRight = window.innerWidth - mouseX;
-    let distTop = mouseY - playerRect.top;
-    let distBottom = controlsRect.top - mouseY;
+    let distLeft   = localMouseX;
+    let distRight  = playerRect.width - localMouseX;
+    let distTop    = localMouseY;
+    let distBottom = activeHeight - localMouseY;
     
     let edges = [
-      { name: 'left', dist: distLeft, active: closeToLeft },
-      { name: 'right', dist: distRight, active: closeToRight },
-      { name: 'top', dist: distTop, active: closeToTop },
+      { name: 'left',   dist: distLeft,   active: closeToLeft },
+      { name: 'right',  dist: distRight,  active: closeToRight },
+      { name: 'top',    dist: distTop,    active: closeToTop },
       { name: 'bottom', dist: distBottom, active: closeToBottom }
     ];
     
-    // Obter apenas as bordas ativas de snap e ordenar pela mais próxima do rato
     let activeSnaps = edges.filter(ed => ed.active).sort((a, b) => a.dist - b.dist);
     
     if (activeSnaps.length > 0) {
       const targetEdge = activeSnaps[0].name;
-      dockedEdge = targetEdge; // Guardar estado da doca atualizado
+      dockedEdge = targetEdge;
       
-      // Aplicar classes CSS e remover inline-styles concorrentes
       el.classList.remove('dock-left', 'dock-right', 'dock-top', 'dock-bottom');
       el.classList.add('dock-' + targetEdge);
       
       if (targetEdge === 'left') {
         if (el.classList.contains('horizontal')) {
           el.classList.remove('horizontal');
-          const dummy = el.offsetWidth; // Forçar reflow
+          const dummy = el.offsetWidth;
           grabOffsetX = el.offsetWidth / 2;
           grabOffsetY = el.offsetHeight / 2;
         }
@@ -2037,7 +2040,6 @@ function makeDraggable(el) {
           grabOffsetX = el.offsetWidth / 2;
           grabOffsetY = el.offsetHeight / 2;
         }
-        // Limpar estilos inline: a classe CSS (.dock-top) posiciona tudo nativamente!
         el.style.left = '';
         el.style.right = '';
         el.style.top = '';
@@ -2050,7 +2052,6 @@ function makeDraggable(el) {
           grabOffsetX = el.offsetWidth / 2;
           grabOffsetY = el.offsetHeight / 2;
         }
-        // Limpar estilos inline: a classe CSS (.dock-bottom) posiciona tudo nativamente!
         el.style.left = '';
         el.style.right = '';
         el.style.top = '';
@@ -2058,7 +2059,7 @@ function makeDraggable(el) {
       }
     } else {
       // ── FLUTUAÇÃO LIVRE NO MEIO ──
-      dockedEdge = 'none'; // Desacoplado
+      dockedEdge = 'none';
       el.classList.remove('dock-left', 'dock-right', 'dock-top', 'dock-bottom');
       
       if (el.classList.contains('horizontal')) {
@@ -2091,11 +2092,12 @@ function makeDraggable(el) {
   window.addEventListener('resize', () => {
     if (el.style.display === 'none') return;
     
-    const playerWrap = document.getElementById('playerWrap');
-    if (!playerWrap || playerWrap.style.display === 'none') return;
+    const playerCenter = document.querySelector('.player-center');
+    if (!playerCenter || document.getElementById('playerWrap')?.style.display === 'none') return;
     
-    const playerRect = playerWrap.getBoundingClientRect();
+    const playerRect = playerCenter.getBoundingClientRect();
     const controlsEl = document.getElementById('controls');
+    if (!controlsEl) return;
     const controlsRect = controlsEl.getBoundingClientRect();
     
     const activeHeight = controlsRect.top - playerRect.top;
@@ -2138,7 +2140,6 @@ function makeDraggable(el) {
       el.style.bottom = '';
     } 
     else {
-      // Modo flutuante: apenas manter nos limites do ecrã
       el.classList.remove('horizontal');
       el.style.left = Math.max(0, Math.min(el.offsetLeft, maxLeft)) + 'px';
       el.style.top = Math.max(0, Math.min(el.offsetTop, maxTop)) + 'px';

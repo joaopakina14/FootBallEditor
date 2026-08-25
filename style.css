@@ -105,10 +105,10 @@ video { flex: 1; width: 100%; height: calc(100% - var(--bar-h)); object-fit: con
 .draw-panel {
   position: absolute;
   left: 12px;
-  top: calc(50% - 38px);
+  top: 50%;
   transform: translateY(-50%);
   width: 84px;
-  max-height: calc(100vh - 90px);
+  max-height: calc(100% - 8px); /* 100% of player-center, not viewport */
   overflow-y: auto;
   overflow-x: hidden;
   background: rgba(13,13,20,0.95);
@@ -160,7 +160,7 @@ video { flex: 1; width: 100%; height: calc(100% - var(--bar-h)); object-fit: con
   width: auto;
   height: 62px;
   max-height: none;
-  max-width: calc(100% - 24px);
+  max-width: calc(100% - 24px); /* 100% of .player-center */
   padding: 6px 14px;
   gap: 8px;
   overflow-x: auto;
@@ -250,9 +250,10 @@ video { flex: 1; width: 100%; height: calc(100% - var(--bar-h)); object-fit: con
   border-radius: 6px;
 }
 
-/* Classes de Docking Persistente (Pure CSS para evitar race conditions no resize) */
+/* Classes de Docking — posicionadas dentro do .player-center (position:relative) */
 .draw-panel.dock-left {
   left: 0 !important;
+  right: auto !important;
   transform: none !important;
 }
 .draw-panel.dock-right {
@@ -261,16 +262,20 @@ video { flex: 1; width: 100%; height: calc(100% - var(--bar-h)); object-fit: con
   transform: none !important;
 }
 .draw-panel.dock-top {
-  top: 0 !important;
+  top: 4px !important;
   left: 50% !important;
+  right: auto !important;
+  bottom: auto !important;
   transform: translateX(-50%) !important;
 }
 .draw-panel.dock-bottom {
   top: auto !important;
-  bottom: var(--bar-h) !important;
+  bottom: 4px !important;
   left: 50% !important;
+  right: auto !important;
   transform: translateX(-50%) !important;
 }
+
 
 /* =========================================
    CONTROLS BAR
