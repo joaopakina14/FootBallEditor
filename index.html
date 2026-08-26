@@ -50,7 +50,7 @@
       <div class="sidebar-panel left collapsed" id="playlistSidebar">
         <div class="sb-header">
           <span class="sb-title" data-i18n="sb-playlist-title">Playlists Táticas</span>
-          <button class="sb-add-btn" id="btnCreatePlaylist" title="Criar Playlist">+</button>
+          <button class="sb-add-btn" id="btnCreatePlaylist" data-i18n-title="title-create-pl">+</button>
         </div>
         <div class="sb-content">
           <div class="playlist-selector-wrap" style="display: flex; gap: 4px; align-items: center; width: 100%;">
@@ -58,8 +58,8 @@
               <option value="" data-i18n="select-playlist-prompt">-- Escolher Playlist --</option>
             </select>
             <input type="text" id="playlistRenameInput" class="playlist-select" style="display: none; flex: 1; min-width: 0; padding: 6px 10px;" placeholder="Nome da playlist..." />
-            <button class="sb-add-btn" id="btnRenamePlaylist" title="Editar Nome" style="display: none; font-size: 11px; flex-shrink: 0; width: 26px; height: 26px;">✏️</button>
-            <button class="sb-add-btn" id="btnDeletePlaylist" title="Eliminar Playlist" style="display: none; font-size: 11px; flex-shrink: 0; width: 26px; height: 26px; background: rgba(229, 9, 20, 0.15); color: #e50914;">🗑️</button>
+            <button class="sb-add-btn" id="btnRenamePlaylist" data-i18n-title="title-rename-pl" style="display: none; font-size: 11px; flex-shrink: 0; width: 26px; height: 26px;">✏️</button>
+            <button class="sb-add-btn" id="btnDeletePlaylist" data-i18n-title="title-delete-pl" style="display: none; font-size: 11px; flex-shrink: 0; width: 26px; height: 26px; background: rgba(229, 9, 20, 0.15); color: #e50914;">🗑️</button>
           </div>
           <button class="btn-open" id="btnAddCurrentToPlaylist" style="width: 100%; margin-top: 6px; font-size: 11px; padding: 6px 12px;" disabled data-i18n="sb-add-current-btn">+ Adicionar Seleção Atual</button>
           <button class="btn-open" id="btnExportPlaylist" data-i18n="btn-export-pl" style="width: 100%; margin-top: 6px; font-size: 11px; padding: 6px 12px; background: linear-gradient(135deg, #27ae60, #2ecc71); box-shadow: 0 4px 20px rgba(39, 174, 96, 0.25);" disabled>📥 Exportar Playlist</button>
@@ -69,7 +69,7 @@
               <input type="checkbox" id="checkSelectAll" />
               <span>Selecionar Todos</span>
             </label>
-            <button id="btnDeleteSelected" class="clip-bulk-del" style="display:none;" title="Eliminar selecionados">🗑️ Eliminar Seleção</button>
+            <button id="btnDeleteSelected" class="clip-bulk-del" style="display:none;" data-i18n-title="title-delete-selected">🗑️ Eliminar Seleção</button>
           </div>
           <div class="sb-label" data-i18n="sb-clips-label">Clips na Playlist</div>
           <ul class="clip-list" id="clipList">
@@ -96,7 +96,7 @@
 
         <!-- Drawing toolbar -->
         <div class="draw-panel" id="drawPanel">
-          <div class="dp-label" id="dpToolsLabel" title="Ferramentas de Desenho">🛠️</div>
+          <div class="dp-label" id="dpToolsLabel" data-i18n-title="title-dp-tools">🛠️</div>
           <div class="dp-tools-grid">
             <button class="dp-tool active" data-tool="pencil" data-i18n-title="title-pencil">&#9998;</button>
             <button class="dp-tool" data-tool="line"   data-i18n-title="title-line">&#9585;</button>
@@ -135,9 +135,9 @@
           </div>
           <div class="dp-sep"></div>
           <div class="dp-actions">
-            <button class="dp-action" id="btnUndo" title="Desfazer (Ctrl+Z)">↺</button>
-            <button class="dp-action" id="btnRedo" title="Refazer (Ctrl+Y)">↻</button>
-            <button class="dp-action danger" id="btnClearAll" title="Limpar Tudo">🗑️</button>
+            <button class="dp-action" id="btnUndo" data-i18n-title="title-undo">↺</button>
+            <button class="dp-action" id="btnRedo" data-i18n-title="title-redo">↻</button>
+            <button class="dp-action danger" id="btnClearAll" data-i18n-title="title-clear-all">🗑️</button>
           </div>
         </div>
 
@@ -194,7 +194,7 @@
       <div class="sidebar-panel right collapsed" id="taggingSidebar">
         <div class="sb-header">
           <span class="sb-title" data-i18n="sb-tagging-title">Painel de Eventos</span>
-          <button class="sb-add-btn" id="btnAddTagShortcut" title="Adicionar Atalho">+</button>
+          <button class="sb-add-btn" id="btnAddTagShortcut" data-i18n-title="title-add-shortcut">+</button>
         </div>
         <div class="sb-content">
           <div class="tag-settings">
@@ -237,7 +237,7 @@
     <div class="modal-card">
       <div class="modal-header">
         <h3 data-i18n="modal-title">Licenciamento FieldVision</h3>
-        <button class="modal-close" id="btnCloseLicense" title="Fechar">&times;</button>
+        <button class="modal-close" id="btnCloseLicense" data-i18n-title="title-close">&times;</button>
       </div>
       <div class="modal-body">
         <div class="license-status-section">

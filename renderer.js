@@ -99,7 +99,19 @@ const appTranslations = {
     "sb-tagging-title": "Painel de Eventos",
     "sb-tag-config": "Configurar Atalhos",
     "tag-info-desc": "Pressione as teclas no teclado para marcar eventos retroativamente (5s antes a 3s depois).",
-    "sb-tagged-events": "Eventos Registados"
+    "sb-tagged-events": "Eventos Registados",
+    "tag-new-event": "Novo Evento",
+    "title-playlist": "Playlist",
+    "title-tagging": "Eventos",
+    "title-create-pl": "Criar Playlist",
+    "title-rename-pl": "Editar Nome",
+    "title-delete-pl": "Eliminar Playlist",
+    "title-delete-selected": "Eliminar selecionados",
+    "title-dp-tools": "Ferramentas de Desenho",
+    "title-undo": "Desfazer (Ctrl+Z)",
+    "title-redo": "Refazer (Ctrl+Y)",
+    "title-clear-all": "Limpar Tudo",
+    "title-add-shortcut": "Adicionar Atalho"
   },
   en: {
     "empty-title": "No video loaded",
@@ -187,7 +199,19 @@ const appTranslations = {
     "sb-tagging-title": "Events Panel",
     "sb-tag-config": "Configure Shortcuts",
     "tag-info-desc": "Press the keys on the keyboard to tag events retroactively (5s before to 3s after).",
-    "sb-tagged-events": "Registered Events"
+    "sb-tagged-events": "Registered Events",
+    "tag-new-event": "New Event",
+    "title-playlist": "Playlist",
+    "title-tagging": "Events",
+    "title-create-pl": "Create Playlist",
+    "title-rename-pl": "Edit Name",
+    "title-delete-pl": "Delete Playlist",
+    "title-delete-selected": "Delete selected",
+    "title-dp-tools": "Drawing Tools",
+    "title-undo": "Undo (Ctrl+Z)",
+    "title-redo": "Redo (Ctrl+Y)",
+    "title-clear-all": "Clear All",
+    "title-add-shortcut": "Add Shortcut"
   },
   es: {
     "empty-title": "Sin video cargado",
@@ -275,7 +299,19 @@ const appTranslations = {
     "sb-tagging-title": "Panel de Eventos",
     "sb-tag-config": "Configurar Accesos Directos",
     "tag-info-desc": "Presione las teclas en el teclado para marcar eventos retroactivamente (5s antes a 3s después).",
-    "sb-tagged-events": "Eventos Registrados"
+    "sb-tagged-events": "Eventos Registrados",
+    "tag-new-event": "Nuevo Evento",
+    "title-playlist": "Playlist",
+    "title-tagging": "Eventos",
+    "title-create-pl": "Crear Playlist",
+    "title-rename-pl": "Editar Nombre",
+    "title-delete-pl": "Eliminar Playlist",
+    "title-delete-selected": "Eliminar seleccionados",
+    "title-dp-tools": "Herramientas de Dibujo",
+    "title-undo": "Deshacer (Ctrl+Z)",
+    "title-redo": "Rehacer (Ctrl+Y)",
+    "title-clear-all": "Limpiar Todo",
+    "title-add-shortcut": "Añadir Atajo"
   },
   fr: {
     "empty-title": "Aucune vidéo chargée",
@@ -363,7 +399,19 @@ const appTranslations = {
     "sb-tagging-title": "Panneau d'Événements",
     "sb-tag-config": "Configurer les Raccourcis",
     "tag-info-desc": "Appuyez sur les touches du clavier pour marquer les événements rétroactivement (5s avant à 3s après).",
-    "sb-tagged-events": "Événements Enregistrés"
+    "sb-tagged-events": "Événements Enregistrés",
+    "tag-new-event": "Nouvel Événement",
+    "title-playlist": "Playlist",
+    "title-tagging": "Événements",
+    "title-create-pl": "Créer une Playlist",
+    "title-rename-pl": "Modifier le Nom",
+    "title-delete-pl": "Supprimer la Playlist",
+    "title-delete-selected": "Supprimer la sélection",
+    "title-dp-tools": "Outils de Dessin",
+    "title-undo": "Annuler (Ctrl+Z)",
+    "title-redo": "Refaire (Ctrl+Y)",
+    "title-clear-all": "Tout Effacer",
+    "title-add-shortcut": "Ajouter un Raccourci"
   },
   de: {
     "empty-title": "Keine Videodatei geladen",
@@ -451,7 +499,19 @@ const appTranslations = {
     "sb-tagging-title": "Ereignis-Panel",
     "sb-tag-config": "Tastenkombinationen Konfigurieren",
     "tag-info-desc": "Drücken Sie die Tasten auf der Tastatur, um Ereignisse rückwirkend zu markieren (5s vor bis 3s danach).",
-    "sb-tagged-events": "Registrierte Ereignisse"
+    "sb-tagged-events": "Registrierte Ereignisse",
+    "tag-new-event": "Neues Ereignis",
+    "title-playlist": "Playlist",
+    "title-tagging": "Ereignisse",
+    "title-create-pl": "Playlist Erstellen",
+    "title-rename-pl": "Name Bearbeiten",
+    "title-delete-pl": "Playlist Löschen",
+    "title-delete-selected": "Auswahl Löschen",
+    "title-dp-tools": "Zeichenwerkzeuge",
+    "title-undo": "Rückgängig (Ctrl+Z)",
+    "title-redo": "Wiederholen (Ctrl+Y)",
+    "title-clear-all": "Alles Löschen",
+    "title-add-shortcut": "Tastenkürzel Hinzufügen"
   }
 };
 
@@ -3103,7 +3163,7 @@ if (btnAddTagShortcut) {
       return;
     }
     
-    const defaultName = `Novo Evento ${nextKey}`;
+    const defaultName = `${t('tag-new-event', 'Novo Evento')} ${nextKey}`;
     
     // Adiciona diretamente com o nome padrão e foca para renomeação,
     // evitando diálogos de prompt que o Electron não suporta.
