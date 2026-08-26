@@ -111,7 +111,11 @@ const appTranslations = {
     "title-undo": "Desfazer (Ctrl+Z)",
     "title-redo": "Refazer (Ctrl+Y)",
     "title-clear-all": "Limpar Tudo",
-    "title-add-shortcut": "Adicionar Atalho"
+    "title-add-shortcut": "Adicionar Atalho",
+    "title-clipin-set": "Inicio: {0} (I)",
+    "title-clipout-set": "Fim: {0} (O)",
+    "title-cut-ready": "Cortar {0} → {1} ({2}s) — X",
+    "title-edit-count": "Modo de desenho (E) — {0} anotação(ões)"
   },
   en: {
     "empty-title": "No video loaded",
@@ -211,7 +215,11 @@ const appTranslations = {
     "title-undo": "Undo (Ctrl+Z)",
     "title-redo": "Redo (Ctrl+Y)",
     "title-clear-all": "Clear All",
-    "title-add-shortcut": "Add Shortcut"
+    "title-add-shortcut": "Add Shortcut",
+    "title-clipin-set": "Start: {0} (I)",
+    "title-clipout-set": "End: {0} (O)",
+    "title-cut-ready": "Cut {0} → {1} ({2}s) — X",
+    "title-edit-count": "Draw mode (E) — {0} annotation(s)"
   },
   es: {
     "empty-title": "Sin video cargado",
@@ -311,7 +319,11 @@ const appTranslations = {
     "title-undo": "Deshacer (Ctrl+Z)",
     "title-redo": "Rehacer (Ctrl+Y)",
     "title-clear-all": "Limpiar Todo",
-    "title-add-shortcut": "Añadir Atajo"
+    "title-add-shortcut": "Añadir Atajo",
+    "title-clipin-set": "Inicio: {0} (I)",
+    "title-clipout-set": "Fin: {0} (O)",
+    "title-cut-ready": "Cortar {0} → {1} ({2}s) — X",
+    "title-edit-count": "Modo dibujo (E) — {0} anotación(es)"
   },
   fr: {
     "empty-title": "Aucune vidéo chargée",
@@ -411,7 +423,11 @@ const appTranslations = {
     "title-undo": "Annuler (Ctrl+Z)",
     "title-redo": "Refaire (Ctrl+Y)",
     "title-clear-all": "Tout Effacer",
-    "title-add-shortcut": "Ajouter un Raccourci"
+    "title-add-shortcut": "Ajouter un Raccourci",
+    "title-clipin-set": "Début: {0} (I)",
+    "title-clipout-set": "Fin: {0} (O)",
+    "title-cut-ready": "Couper {0} → {1} ({2}s) — X",
+    "title-edit-count": "Mode dessin (E) — {0} annotation(s)"
   },
   de: {
     "empty-title": "Keine Videodatei geladen",
@@ -511,7 +527,11 @@ const appTranslations = {
     "title-undo": "Rückgängig (Ctrl+Z)",
     "title-redo": "Wiederholen (Ctrl+Y)",
     "title-clear-all": "Alles Löschen",
-    "title-add-shortcut": "Tastenkürzel Hinzufügen"
+    "title-add-shortcut": "Tastenkürzel Hinzufügen",
+    "title-clipin-set": "Anfang: {0} (I)",
+    "title-clipout-set": "Ende: {0} (O)",
+    "title-cut-ready": "Schneiden {0} → {1} ({2}s) — X",
+    "title-edit-count": "Zeichenmodus (E) — {0} Anmerkung(en)"
   }
 };
 
@@ -1137,14 +1157,14 @@ function markIn() {
   if (!video.src) return
   clip.inTime = video.currentTime
   btnClipIn.classList.add('set-in')
-  btnClipIn.title = `Inicio: ${formatTime(clip.inTime)} (I)`
+  btnClipIn.title = t('title-clipin-set', `Inicio: {0} (I)`, formatTime(clip.inTime))
   updateClipUI()
 }
 function markOut() {
   if (!video.src) return
   clip.outTime = video.currentTime
   btnClipOut.classList.add('set-out')
-  btnClipOut.title = `Fim: ${formatTime(clip.outTime)} (O)`
+  btnClipOut.title = t('title-clipout-set', `Fim: {0} (O)`, formatTime(clip.outTime))
   updateClipUI()
 }
 
@@ -1171,7 +1191,7 @@ function updateClipUI() {
     clipZone.style.display = 'block'
     btnCut.disabled = false
     btnCut.classList.add('ready')
-    btnCut.title = `Cortar ${formatTime(t0)} \u2192 ${formatTime(t1)} (${(t1-t0).toFixed(1)}s) \u2014 X`
+    btnCut.title = t('title-cut-ready', `Cortar {0} → {1} ({2}s) — X`, formatTime(t0), formatTime(t1), (t1-t0).toFixed(1))
   }
 }
 
@@ -1179,10 +1199,10 @@ function resetClipUI() {
   clip.inTime = null; clip.outTime = null
   clipZone.style.display = clipInMarker.style.display = clipOutMarker.style.display = 'none'
   btnClipIn.classList.remove('set-in'); btnClipOut.classList.remove('set-out')
-  btnClipIn.title  = 'Marcar inicio do corte (I)'
-  btnClipOut.title = 'Marcar fim do corte (O)'
+  btnClipIn.title  = t('title-clipin', 'Marcar início do corte (I)')
+  btnClipOut.title = t('title-clipout', 'Marcar fim do corte (O)')
   btnCut.disabled  = true; btnCut.classList.remove('ready')
-  btnCut.title     = 'Cortar e guardar (X)'
+  btnCut.title     = t('title-cut', 'Cortar e guardar (X)')
 }
 
 btnCut.addEventListener('click', doCut)
@@ -1981,8 +2001,8 @@ function updateTimelineMarkers() {
 
 function updateAnnotationBadge() {
   const count = ds.annotations.length
-  if (count > 0) { btnEditMode.dataset.count = count; btnEditMode.title = `Modo de desenho (E) \u2014 ${count} anota\u00E7\u00E3o(oes)` }
-  else { delete btnEditMode.dataset.count; btnEditMode.title = 'Modo de desenho (E)' }
+  if (count > 0) { btnEditMode.dataset.count = count; btnEditMode.title = t('title-edit-count', `Modo de desenho (E) — {0} anotação(ões)`, count) }
+  else { delete btnEditMode.dataset.count; btnEditMode.title = t('title-edit', 'Modo de desenho (E)') }
 }
 
 // ── Drag & Drop Panel Logic ──────────────────────────────
