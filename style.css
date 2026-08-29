@@ -60,6 +60,7 @@ video { flex: 1; width: 100%; height: calc(100% - var(--bar-h)); object-fit: con
 
 #drawCanvas { position: absolute; top: 0; left: 0; width: 100%; height: calc(100% - var(--bar-h)); pointer-events: none; z-index: 3; }
 #drawCanvas.edit-mode { pointer-events: all; cursor: crosshair; }
+#drawCanvas.edit-mode[data-tool="track"] { cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="%23e50914" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="3"></circle></svg>') 12 12, crosshair; }
 .video-overlay { position: absolute; top: 0; left: 0; width: 100%; height: calc(100% - var(--bar-h)); cursor: pointer; z-index: 2; }
 
 .play-flash { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0); font-size: 64px; color: white; background: rgba(0,0,0,0.55); width: 100px; height: 100px; border-radius: 50%; display: flex; align-items: center; justify-content: center; pointer-events: none; z-index: 10; transition: transform 0.08s ease, opacity 0.3s ease; opacity: 0; }
@@ -1131,4 +1132,63 @@ video { flex: 1; width: 100%; height: calc(100% - var(--bar-h)); object-fit: con
 .event-item.added-flash {
   animation: greenFlash 0.8s cubic-bezier(0.25, 1, 0.5, 1) forwards;
 }
+
+/* Clips & Events Header with Select All */
+.clips-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 2px 8px 2px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  margin-bottom: 8px;
+}
+
+.clip-select-all-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--muted);
+  cursor: pointer;
+  user-select: none;
+  font-weight: 500;
+}
+
+.clip-select-all-label:hover {
+  color: #fff;
+}
+
+.clip-select-all-label input[type="checkbox"],
+.event-select-check,
+.clip-select-check {
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+  accent-color: var(--accent);
+}
+
+.clip-bulk-del {
+  background: rgba(229, 9, 20, 0.15);
+  border: 1px solid rgba(229, 9, 20, 0.3);
+  color: #e50914;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.clip-bulk-del:hover {
+  background: rgba(229, 9, 20, 0.3);
+  color: #fff;
+}
+
+.event-item.selected {
+  background: rgba(0, 230, 118, 0.08);
+  border-color: rgba(0, 230, 118, 0.35);
+}
+
+
+
 

@@ -33,3 +33,10 @@ fieldvision_test.cer
 
 # Video folder (local testing)
 videos/
+
+# Python & AI weights
+__pycache__/
+*.pyc
+*.pt
+fix.js
+

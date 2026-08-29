@@ -13,7 +13,11 @@ let lastPausedTime = -1;
 let currentAppLang = localStorage.getItem('fv_app_lang') || 'en';
 
 const appTranslations = {
-  pt: {
+  "pt": {
+    "confirm-delete-events": "Tens a certeza que pretendes eliminar os {0} eventos selecionados?",
+    "toast-events-added-pl": "✅ {0} eventos adicionados à playlist!",
+    "toast-events-deleted": "🗑️ {0} eventos eliminados com sucesso!",
+    "title-add-selected-pl": "Adicionar à Playlist",
     "empty-title": "Sem vídeo carregado",
     "empty-desc": "Abre um ficheiro de vídeo para começar",
     "empty-btn": "Abrir Vídeo",
@@ -26,6 +30,8 @@ const appTranslations = {
     "dp-redo": "↻ Refazer",
     "dp-clear": "Limpar",
     "filename-empty": "—",
+    "select-all": "Selecionar Todos",
+    "placeholder-playlist-name": "Nome da playlist...",
     "modal-title": "Licenciamento FieldVision",
     "modal-status": "Estado: ",
     "status-free": "Versão de Teste (Free)",
@@ -40,8 +46,6 @@ const appTranslations = {
     "modal-buy-link": "Comprar Licença Pro (€29/ano)",
     "toast-tracker-select": "Clica e arrasta no canvas para desenhar uma caixa à volta do jogador a rastrear.",
     "toast-tracker-active": "IA a rastrear o jogador... Pressiona qualquer tecla para parar.",
-    
-    // Titles (tooltips)
     "title-activate": "Ativar FieldVision Pro",
     "title-minimize": "Minimizar",
     "title-maximize": "Maximizar",
@@ -52,7 +56,7 @@ const appTranslations = {
     "title-arrow": "Seta",
     "title-circle": "Círculo",
     "title-rect": "Retângulo",
-    "title-track": "Rastrear Jogador (IA/OpenCV)",
+    "title-track": "Rastrear Jogador (Alvo 🎯)",
     "title-open": "Abrir ficheiro",
     "title-play": "Play / Pause",
     "title-stop": "Parar",
@@ -63,13 +67,26 @@ const appTranslations = {
     "title-cut": "Cortar e guardar (X)",
     "title-edit": "Modo de desenho (E)",
     "title-fs": "Ecrã inteiro",
-    
-    // License states
+    "title-playlist": "Playlist",
+    "title-tagging": "Eventos",
+    "title-create-pl": "Criar Playlist",
+    "title-rename-pl": "Editar Nome",
+    "title-delete-pl": "Eliminar Playlist",
+    "title-delete-selected": "Eliminar Seleção",
+    "title-dp-tools": "Ferramentas de Desenho",
+    "title-undo": "Desfazer (Ctrl+Z)",
+    "title-redo": "Refazer (Ctrl+Y)",
+    "title-clear-all": "Limpar Tudo",
+    "title-add-shortcut": "Adicionar Atalho",
+    "title-export-csv": "Exportar Eventos em CSV (📤)",
+    "title-import-metrica": "Importar Eventos em CSV (📥)",
+    "title-clipin-set": "Início: {0} (I)",
+    "title-clipout-set": "Fim: {0} (O)",
+    "title-cut-ready": "Cortar {0} → {1} ({2}s) — X",
+    "title-edit-count": "Modo de desenho (E) — {0} anotação(ões)",
     "license-badge-free": "Ativar Pro ⚡",
     "license-badge-pro": "PRO ATIVO ✓",
     "license-placeholder": "Ex: 490A40CB-B120-4993-BEA7-...",
-    
-    // Toasts
     "toast-license-input": "⚠️ Introduz uma chave de licença!",
     "toast-license-checking": "⏳ A verificar chave...",
     "toast-license-activated": "✅ FieldVision Pro ativado com sucesso!",
@@ -90,8 +107,35 @@ const appTranslations = {
     "toast-limit-annotations": "⚠️ Limite Free: Máximo de 3 anotações por vídeo atingido. Adquire o Pro para anotações ilimitadas!",
     "toast-limit-annotations-short": "⚠️ Limite Free: Máximo de 3 anotações por vídeo atingido.",
     "toast-link-players": "🔗 Linha curva elástica ligada aos 2 jogadores!",
-    "toast-attach-player": "🚗 Anotação presa ao jogador! Vai de boleia!",
+    "toast-attach-player": "🚗 Anotação presa ao jogador!",
+    "toast-ann-removed": "🗑️ Marcação removida",
     "toast-open-folder": "Abrir pasta",
+    "toast-preparing-video": "⏳ A preparar vídeo...",
+    "toast-transcoding": "⏳ A converter vídeo para formato compatível ({0}%)...",
+    "toast-video-loaded": "✅ Vídeo carregado com sucesso!",
+    "toast-video-err": "❌ Erro ao converter vídeo: {0}",
+    "toast-playback-err": "❌ Erro ao reproduzir vídeo: {0}",
+    "toast-set-in-out": "❌ Define primeiro o ponto de In (I) e Out (O) na barra de tempo",
+    "toast-clip-added-pl": "✅ Clip adicionado à playlist com sucesso!",
+    "toast-pl-empty": "❌ A playlist está vazia.",
+    "toast-pl-invalid": "❌ {0} clip(s) sem caminho de vídeo válido.",
+    "toast-pl-prep": "⏳ A preparar {0} clip(s) com marcações…",
+    "toast-pl-exporting": "⏳ A exportar {0} clip(s)…",
+    "toast-pl-success": "✅ Playlist exportada com sucesso!",
+    "toast-auto-pause": "⏸️ Pausa automática de análise",
+    "toast-event-tagged": "🏷️ Evento marcado: {0}",
+    "toast-event-added-pl": "✅ Evento adicionado à playlist!",
+    "toast-event-already-pl": "ℹ️ Este evento já está na playlist",
+    "toast-sc-min": "⚠️ Tens de ter pelo menos 1 atalho configurado",
+    "toast-sc-limit": "⚠️ Limite atingido: Só podes configurar atalhos de 1 a 9",
+    "toast-sc-added": "✅ Atalho (Tecla {0}) adicionado! Escreva o nome abaixo.",
+    "toast-export-csv-empty": "⚠️ Não existem eventos registados para exportar!",
+    "toast-export-csv-success": "✅ {0} eventos exportados com sucesso!",
+    "toast-import-csv-success": "✅ {0} eventos importados com sucesso do CSV!",
+    "toast-import-csv-empty": "⚠️ Ficheiro CSV vazio ou sem dados válidos.",
+    "toast-import-csv-cols": "⚠️ Não foi possível reconhecer as colunas do CSV.",
+    "toast-cutting-render": "✂️ A processar e gravar elementos no vídeo...",
+    "toast-cutting-fast": "✂️ A cortar...",
     "sb-playlist-title": "Playlists Táticas",
     "select-playlist-prompt": "-- Escolher Playlist --",
     "sb-add-current-btn": "+ Adicionar Seleção Atual",
@@ -100,24 +144,9 @@ const appTranslations = {
     "sb-tag-config": "Configurar Atalhos",
     "tag-info-desc": "Pressione as teclas no teclado para marcar eventos retroativamente (5s antes a 3s depois).",
     "sb-tagged-events": "Eventos Registados",
-    "tag-new-event": "Novo Evento",
-    "title-playlist": "Playlist",
-    "title-tagging": "Eventos",
-    "title-create-pl": "Criar Playlist",
-    "title-rename-pl": "Editar Nome",
-    "title-delete-pl": "Eliminar Playlist",
-    "title-delete-selected": "Eliminar selecionados",
-    "title-dp-tools": "Ferramentas de Desenho",
-    "title-undo": "Desfazer (Ctrl+Z)",
-    "title-redo": "Refazer (Ctrl+Y)",
-    "title-clear-all": "Limpar Tudo",
-    "title-add-shortcut": "Adicionar Atalho",
-    "title-clipin-set": "Inicio: {0} (I)",
-    "title-clipout-set": "Fim: {0} (O)",
-    "title-cut-ready": "Cortar {0} → {1} ({2}s) — X",
-    "title-edit-count": "Modo de desenho (E) — {0} anotação(ões)"
+    "tag-new-event": "Novo Evento"
   },
-  en: {
+  "en": {
     "empty-title": "No video loaded",
     "empty-desc": "Open a video file to get started",
     "empty-btn": "Open Video",
@@ -130,11 +159,13 @@ const appTranslations = {
     "dp-redo": "↻ Redo",
     "dp-clear": "Clear",
     "filename-empty": "—",
+    "select-all": "Select All",
+    "placeholder-playlist-name": "Playlist name...",
     "modal-title": "FieldVision Licensing",
     "modal-status": "Status: ",
     "status-free": "Free Trial Version",
     "status-pro": "Pro Active",
-    "modal-inst-free": "Enter your Pro key sent by Lemon Squeezy to remove watermarks and unlock unlimited annotations and AI tracking.",
+    "modal-inst-free": "Enter your Pro key sent by Lemon Squeezy to remove watermarks and unlock unlimited annotations and tracking.",
     "modal-inst-pro": "Your Pro licence is active and validated on this computer. Thank you for your support!",
     "btn-activate": "Activate FieldVision Pro",
     "btn-deactivate": "Deactivate Licence",
@@ -143,9 +174,7 @@ const appTranslations = {
     "modal-buy-text": "Don't have a key yet? ",
     "modal-buy-link": "Buy Pro Licence (€29/year)",
     "toast-tracker-select": "Click and drag on the canvas to draw a box around the player to track.",
-    "toast-tracker-active": "AI tracking player... Press any key to stop.",
-    
-    // Titles
+    "toast-tracker-active": "Tracking player... Press any key to stop.",
     "title-activate": "Activate FieldVision Pro",
     "title-minimize": "Minimize",
     "title-maximize": "Maximize",
@@ -156,7 +185,7 @@ const appTranslations = {
     "title-arrow": "Arrow",
     "title-circle": "Circle",
     "title-rect": "Rectangle",
-    "title-track": "Track Player (AI/OpenCV)",
+    "title-track": "Track Player (Target 🎯)",
     "title-open": "Open file",
     "title-play": "Play / Pause",
     "title-stop": "Stop",
@@ -167,13 +196,26 @@ const appTranslations = {
     "title-cut": "Cut and save (X)",
     "title-edit": "Draw mode (E)",
     "title-fs": "Fullscreen",
-    
-    // License states
+    "title-playlist": "Playlist",
+    "title-tagging": "Events",
+    "title-create-pl": "Create Playlist",
+    "title-rename-pl": "Edit Name",
+    "title-delete-pl": "Delete Playlist",
+    "title-delete-selected": "Delete Selection",
+    "title-dp-tools": "Drawing Tools",
+    "title-undo": "Undo (Ctrl+Z)",
+    "title-redo": "Redo (Ctrl+Y)",
+    "title-clear-all": "Clear All",
+    "title-add-shortcut": "Add Shortcut",
+    "title-export-csv": "Export Events to CSV (📤)",
+    "title-import-metrica": "Import Events from CSV (📥)",
+    "title-clipin-set": "Start: {0} (I)",
+    "title-clipout-set": "End: {0} (O)",
+    "title-cut-ready": "Cut {0} → {1} ({2}s) — X",
+    "title-edit-count": "Draw mode (E) — {0} annotation(s)",
     "license-badge-free": "Activate Pro ⚡",
     "license-badge-pro": "PRO ACTIVE ✓",
     "license-placeholder": "Ex: 490A40CB-B120-4993-BEA7-...",
-    
-    // Toasts
     "toast-license-input": "⚠️ Please enter a licence key!",
     "toast-license-checking": "⏳ Checking key...",
     "toast-license-activated": "✅ FieldVision Pro activated successfully!",
@@ -185,7 +227,7 @@ const appTranslations = {
     "toast-select-duration": "❌ Select at least 0.5 seconds",
     "toast-export-success": "✅ {0}{1}",
     "toast-export-error": "❌ Error: {0}",
-    "toast-limit-track": "⚠️ Trial Limit: You have already used AI tracking 5 times. Buy Pro for unlimited usage!",
+    "toast-limit-track": "⚠️ Trial Limit: You have already used tracking 5 times. Buy Pro for unlimited usage!",
     "toast-track-free-limit": "⚠️ Free tracking limited to 2 seconds of clip...",
     "toast-track-analyzing": "🎯 Analyzing and locking motion on player...",
     "toast-track-success-trial": "🎉 Tracking complete (Trial {0} of 5). Buy Pro!",
@@ -194,34 +236,46 @@ const appTranslations = {
     "toast-limit-annotations": "⚠️ Free Limit: Maximum of 3 annotations per video reached. Buy Pro for unlimited annotations!",
     "toast-limit-annotations-short": "⚠️ Free Limit: Maximum of 3 annotations per video reached.",
     "toast-link-players": "🔗 Elastic link line attached to both players!",
-    "toast-attach-player": "🚗 Annotation attached to player! Hitching a ride!",
+    "toast-attach-player": "🚗 Annotation attached to player!",
+    "toast-ann-removed": "🗑️ Annotation removed",
     "toast-open-folder": "Open folder",
+    "toast-preparing-video": "⏳ Preparing video...",
+    "toast-transcoding": "⏳ Converting video to compatible format ({0}%)...",
+    "toast-video-loaded": "✅ Video loaded successfully!",
+    "toast-video-err": "❌ Error converting video: {0}",
+    "toast-playback-err": "❌ Playback error: {0}",
+    "toast-set-in-out": "❌ Set In (I) and Out (O) points on timeline first",
+    "toast-clip-added-pl": "✅ Clip added to playlist successfully!",
+    "toast-pl-empty": "❌ Playlist is empty.",
+    "toast-pl-invalid": "❌ {0} clip(s) with invalid video path.",
+    "toast-pl-prep": "⏳ Preparing {0} clip(s) with annotations…",
+    "toast-pl-exporting": "⏳ Exporting {0} clip(s)…",
+    "toast-pl-success": "✅ Playlist exported successfully!",
+    "toast-auto-pause": "⏸️ Analysis auto-pause",
+    "toast-event-tagged": "🏷️ Event tagged: {0}",
+    "toast-event-added-pl": "✅ Event added to playlist!",
+    "toast-event-already-pl": "ℹ️ This event is already in the playlist",
+    "toast-sc-min": "⚠️ You must have at least 1 shortcut configured",
+    "toast-sc-limit": "⚠️ Limit reached: You can only configure shortcuts 1 to 9",
+    "toast-sc-added": "✅ Shortcut (Key {0}) added! Enter name below.",
+    "toast-export-csv-empty": "⚠️ No registered events to export!",
+    "toast-export-csv-success": "✅ {0} events successfully exported!",
+    "toast-import-csv-success": "✅ {0} events successfully imported from CSV!",
+    "toast-import-csv-empty": "⚠️ CSV file empty or without valid data.",
+    "toast-import-csv-cols": "⚠️ Could not recognize CSV columns.",
+    "toast-cutting-render": "✂️ Processing and burning overlays onto video...",
+    "toast-cutting-fast": "✂️ Cutting...",
     "sb-playlist-title": "Tactical Playlists",
     "select-playlist-prompt": "-- Choose Playlist --",
     "sb-add-current-btn": "+ Add Current Selection",
     "sb-clips-label": "Clips in Playlist",
     "sb-tagging-title": "Events Panel",
     "sb-tag-config": "Configure Shortcuts",
-    "tag-info-desc": "Press the keys on the keyboard to tag events retroactively (5s before to 3s after).",
+    "tag-info-desc": "Press keyboard keys to tag events retroactively (5s before to 3s after).",
     "sb-tagged-events": "Registered Events",
-    "tag-new-event": "New Event",
-    "title-playlist": "Playlist",
-    "title-tagging": "Events",
-    "title-create-pl": "Create Playlist",
-    "title-rename-pl": "Edit Name",
-    "title-delete-pl": "Delete Playlist",
-    "title-delete-selected": "Delete selected",
-    "title-dp-tools": "Drawing Tools",
-    "title-undo": "Undo (Ctrl+Z)",
-    "title-redo": "Redo (Ctrl+Y)",
-    "title-clear-all": "Clear All",
-    "title-add-shortcut": "Add Shortcut",
-    "title-clipin-set": "Start: {0} (I)",
-    "title-clipout-set": "End: {0} (O)",
-    "title-cut-ready": "Cut {0} → {1} ({2}s) — X",
-    "title-edit-count": "Draw mode (E) — {0} annotation(s)"
+    "tag-new-event": "New Event"
   },
-  es: {
+  "es": {
     "empty-title": "Sin video cargado",
     "empty-desc": "Abre un archivo de video para comenzar",
     "empty-btn": "Abrir Video",
@@ -234,11 +288,13 @@ const appTranslations = {
     "dp-redo": "↻ Rehacer",
     "dp-clear": "Limpiar",
     "filename-empty": "—",
+    "select-all": "Seleccionar Todos",
+    "placeholder-playlist-name": "Nombre de playlist...",
     "modal-title": "Licencia de FieldVision",
     "modal-status": "Estado: ",
     "status-free": "Versión de Prueba (Free)",
     "status-pro": "Pro Activa",
-    "modal-inst-free": "Introduce tu clave Pro enviada por Lemon Squeezy para eliminar marcas de agua y desbloquear anotaciones e IA ilimitadas.",
+    "modal-inst-free": "Introduce tu clave Pro enviada por Lemon Squeezy para eliminar marcas de agua y desbloquear anotaciones y seguimiento ilimitados.",
     "modal-inst-pro": "Tu licencia Pro está activa y validada en este ordenador. ¡Gracias por tu apoyo!",
     "btn-activate": "Activar FieldVision Pro",
     "btn-deactivate": "Desactivar Licencia",
@@ -247,9 +303,7 @@ const appTranslations = {
     "modal-buy-text": "¿Aún no tienes clave? ",
     "modal-buy-link": "Comprar Licencia Pro (€29/año)",
     "toast-tracker-select": "Haz clic y arrastra en el lienzo para dibujar un cuadro alrededor del jugador a rastrear.",
-    "toast-tracker-active": "IA rastreando al jugador... Presiona cualquier tecla para detener.",
-    
-    // Titles
+    "toast-tracker-active": "Rastreando al jugador... Presiona cualquier tecla para detener.",
     "title-activate": "Activar FieldVision Pro",
     "title-minimize": "Minimizar",
     "title-maximize": "Maximizar",
@@ -260,7 +314,7 @@ const appTranslations = {
     "title-arrow": "Flecha",
     "title-circle": "Círculo",
     "title-rect": "Rectángulo",
-    "title-track": "Rastrear Jugador (IA/OpenCV)",
+    "title-track": "Rastrear Jugador (Alvo 🎯)",
     "title-open": "Abrir archivo",
     "title-play": "Reproducir / Pausa",
     "title-stop": "Detener",
@@ -271,13 +325,26 @@ const appTranslations = {
     "title-cut": "Cortar y guardar (X)",
     "title-edit": "Modo dibujo (E)",
     "title-fs": "Pantalla completa",
-    
-    // License states
+    "title-playlist": "Playlist",
+    "title-tagging": "Eventos",
+    "title-create-pl": "Crear Playlist",
+    "title-rename-pl": "Editar Nombre",
+    "title-delete-pl": "Eliminar Playlist",
+    "title-delete-selected": "Eliminar Selección",
+    "title-dp-tools": "Herramientas de Dibujo",
+    "title-undo": "Deshacer (Ctrl+Z)",
+    "title-redo": "Rehacer (Ctrl+Y)",
+    "title-clear-all": "Limpiar Todo",
+    "title-add-shortcut": "Añadir Atajo",
+    "title-export-csv": "Exportar Eventos en CSV (📤)",
+    "title-import-metrica": "Importar Eventos en CSV (📥)",
+    "title-clipin-set": "Inicio: {0} (I)",
+    "title-clipout-set": "Fin: {0} (O)",
+    "title-cut-ready": "Cortar {0} → {1} ({2}s) — X",
+    "title-edit-count": "Modo dibujo (E) — {0} anotación(es)",
     "license-badge-free": "Activar Pro ⚡",
     "license-badge-pro": "PRO ACTIVO ✓",
     "license-placeholder": "Ex: 490A40CB-B120-4993-BEA7-...",
-    
-    // Toasts
     "toast-license-input": "⚠️ ¡Por favor, introduce una clave de licencia!",
     "toast-license-checking": "⏳ Verificando clave...",
     "toast-license-activated": "✅ ¡FieldVision Pro activado con éxito!",
@@ -289,7 +356,7 @@ const appTranslations = {
     "toast-select-duration": "❌ Selecciona al menos 0.5 segundos",
     "toast-export-success": "✅ {0}{1}",
     "toast-export-error": "❌ Error: {0}",
-    "toast-limit-track": "⚠️ Límite Trial: Ya has usado el rastreo automático 5 veces. ¡Compra Pro para uso ilimitado!",
+    "toast-limit-track": "⚠️ Límite Trial: Ya has usado el rastreo 5 veces. ¡Compra Pro para uso ilimitado!",
     "toast-track-free-limit": "⚠️ Rastreo Free limitado a 2 segundos de clip...",
     "toast-track-analyzing": "🎯 Analizando y fijando el movimiento en el jugador...",
     "toast-track-success-trial": "🎉 Rastreo completado (Prueba {0} de 5). ¡Compra Pro!",
@@ -298,8 +365,35 @@ const appTranslations = {
     "toast-limit-annotations": "⚠️ Límite Free: Máximo de 3 anotaciones por video alcanzado. ¡Compra Pro para anotaciones ilimitadas!",
     "toast-limit-annotations-short": "⚠️ Límite Free: Máximo de 3 anotaciones por video alcanzado.",
     "toast-link-players": "🔗 ¡Línea de enlace elástico conectada a ambos jugadores!",
-    "toast-attach-player": "🚗 ¡Anotación fijada al jugador! ¡Se va de paseo!",
+    "toast-attach-player": "🚗 ¡Anotación fijada al jugador!",
+    "toast-ann-removed": "🗑️ Marca eliminada",
     "toast-open-folder": "Abrir carpeta",
+    "toast-preparing-video": "⏳ Preparando video...",
+    "toast-transcoding": "⏳ Convirtiendo video a formato compatible ({0}%)...",
+    "toast-video-loaded": "✅ ¡Video cargado con éxito!",
+    "toast-video-err": "❌ Error al convertir video: {0}",
+    "toast-playback-err": "❌ Error de reproducción: {0}",
+    "toast-set-in-out": "❌ Define primero los puntos In (I) y Out (O) en la barra de tiempo",
+    "toast-clip-added-pl": "✅ ¡Clip añadido a la playlist con éxito!",
+    "toast-pl-empty": "❌ La playlist está vacía.",
+    "toast-pl-invalid": "❌ {0} clip(s) sin ruta de video válida.",
+    "toast-pl-prep": "⏳ Preparando {0} clip(s) con anotaciones…",
+    "toast-pl-exporting": "⏳ Exportando {0} clip(s)…",
+    "toast-pl-success": "✅ ¡Playlist exportada con éxito!",
+    "toast-auto-pause": "⏸️ Pausa automática de análisis",
+    "toast-event-tagged": "🏷️ Evento marcado: {0}",
+    "toast-event-added-pl": "✅ ¡Evento añadido a la playlist!",
+    "toast-event-already-pl": "ℹ️ Este evento ya está en la playlist",
+    "toast-sc-min": "⚠️ Debes tener al menos 1 atajo configurado",
+    "toast-sc-limit": "⚠️ Límite alcanzado: Solo puedes configurar atajos del 1 al 9",
+    "toast-sc-added": "✅ ¡Atajo (Tecla {0}) añadido! Escribe el nombre abajo.",
+    "toast-export-csv-empty": "⚠️ ¡No hay eventos registrados para exportar!",
+    "toast-export-csv-success": "✅ ¡{0} eventos exportados con éxito!",
+    "toast-import-csv-success": "✅ ¡{0} eventos importados con éxito del CSV!",
+    "toast-import-csv-empty": "⚠️ Archivo CSV vacío o sin datos válidos.",
+    "toast-import-csv-cols": "⚠️ No se pudieron reconocer las columnas del CSV.",
+    "toast-cutting-render": "✂️ Procesando y grabando elementos en el video...",
+    "toast-cutting-fast": "✂️ Cortando...",
     "sb-playlist-title": "Playlists Tácticas",
     "select-playlist-prompt": "-- Elegir Playlist --",
     "sb-add-current-btn": "+ Añadir Selección Actual",
@@ -308,24 +402,9 @@ const appTranslations = {
     "sb-tag-config": "Configurar Accesos Directos",
     "tag-info-desc": "Presione las teclas en el teclado para marcar eventos retroactivamente (5s antes a 3s después).",
     "sb-tagged-events": "Eventos Registrados",
-    "tag-new-event": "Nuevo Evento",
-    "title-playlist": "Playlist",
-    "title-tagging": "Eventos",
-    "title-create-pl": "Crear Playlist",
-    "title-rename-pl": "Editar Nombre",
-    "title-delete-pl": "Eliminar Playlist",
-    "title-delete-selected": "Eliminar seleccionados",
-    "title-dp-tools": "Herramientas de Dibujo",
-    "title-undo": "Deshacer (Ctrl+Z)",
-    "title-redo": "Rehacer (Ctrl+Y)",
-    "title-clear-all": "Limpiar Todo",
-    "title-add-shortcut": "Añadir Atajo",
-    "title-clipin-set": "Inicio: {0} (I)",
-    "title-clipout-set": "Fin: {0} (O)",
-    "title-cut-ready": "Cortar {0} → {1} ({2}s) — X",
-    "title-edit-count": "Modo dibujo (E) — {0} anotación(es)"
+    "tag-new-event": "Nuevo Evento"
   },
-  fr: {
+  "fr": {
     "empty-title": "Aucune vidéo chargée",
     "empty-desc": "Ouvrez un fichier vidéo pour commencer",
     "empty-btn": "Ouvrir Vidéo",
@@ -338,11 +417,13 @@ const appTranslations = {
     "dp-redo": "↻ Rétablir",
     "dp-clear": "Effacer",
     "filename-empty": "—",
+    "select-all": "Tout Sélectionner",
+    "placeholder-playlist-name": "Nom de la playlist...",
     "modal-title": "Licence FieldVision",
     "modal-status": "Statut: ",
     "status-free": "Version d'essai (Free)",
     "status-pro": "Pro Active",
-    "modal-inst-free": "Entrez votre clé Pro envoyée par Lemon Squeezy pour supprimer les filigranes et débloquer les annotations et le suivi IA illimités.",
+    "modal-inst-free": "Entrez votre clé Pro envoyée par Lemon Squeezy pour supprimer les filigranes et débloquer les annotations et le suivi illimités.",
     "modal-inst-pro": "Votre licence Pro est active et validée sur cet ordinateur. Merci pour votre soutien !",
     "btn-activate": "Activer FieldVision Pro",
     "btn-deactivate": "Désactiver la licence",
@@ -351,9 +432,7 @@ const appTranslations = {
     "modal-buy-text": "Vous n'avez pas encore de clé ? ",
     "modal-buy-link": "Acheter une licence Pro (€29/an)",
     "toast-tracker-select": "Cliquez et glissez sur le canevas pour dessiner une boîte autour du joueur à suivre.",
-    "toast-tracker-active": "IA en train de suivre le joueur... Appuyez sur n'importe quelle touche pour arrêter.",
-    
-    // Titles
+    "toast-tracker-active": "Suivi du joueur en cours... Appuyez sur n'importe quelle touche pour arrêter.",
     "title-activate": "Activer FieldVision Pro",
     "title-minimize": "Réduire",
     "title-maximize": "Agrandir",
@@ -364,55 +443,17 @@ const appTranslations = {
     "title-arrow": "Flèche",
     "title-circle": "Cercle",
     "title-rect": "Rectangle",
-    "title-track": "Suivre le joueur (IA/OpenCV)",
+    "title-track": "Suivre le Joueur (Cible 🎯)",
     "title-open": "Ouvrir un fichier",
     "title-play": "Lecture / Pause",
     "title-stop": "Arrêter",
     "title-mute": "Muet / Activer le son",
     "title-speed": "Vitesse",
-    "title-clipin": "Marcar le début du clip (I)",
-    "title-clipout": "Marcar la fin du clip (O)",
+    "title-clipin": "Marquer le début du clip (I)",
+    "title-clipout": "Marquer la fin du clip (O)",
     "title-cut": "Couper et sauvegarder (X)",
     "title-edit": "Mode dessin (E)",
     "title-fs": "Plein écran",
-    
-    // License states
-    "license-badge-free": "Activer Pro ⚡",
-    "license-badge-pro": "PRO ACTIF ✓",
-    "license-placeholder": "Ex: 490A40CB-B120-4993-BEA7-...",
-    
-    // Toasts
-    "toast-license-input": "⚠️ Veuillez saisir une clé de licence !",
-    "toast-license-checking": "⏳ Vérification de la clé...",
-    "toast-license-activated": "✅ FieldVision Pro activé avec succès !",
-    "toast-license-deactivating": "⏳ Désactivation de la licence...",
-    "toast-license-deactivated": "✅ Licence désactivée.",
-    "toast-license-error": "❌ Échec : {0}",
-    "toast-load-success": "📂 {0} annotation(s) chargée(s)",
-    "toast-limit-export": "⚠️ Limite Free : Vous avez atteint la limite mensuelle de 3 exportations. Achetez Pro pour des exportations illimitées !",
-    "toast-select-duration": "❌ Sélectionnez au moins 0.5 seconde",
-    "toast-export-success": "✅ {0}{1}",
-    "toast-export-error": "❌ Échec : {0}",
-    "toast-limit-track": "⚠️ Limite d'essai : Vous avez déjà utilisé le suivi automatique 5 fois. Achetez Pro pour un usage illimité !",
-    "toast-track-free-limit": "⚠️ Suivi Free limité à 2 secondes de clip...",
-    "toast-track-analyzing": "🎯 Analyse et verrouillage du mouvement sur le joueur...",
-    "toast-track-success-trial": "🎉 Suivi terminé (Essai {0} sur 5). Achetez Pro !",
-    "toast-track-success-pro": "✅ Suivi terminé : {0} points enregistrés !",
-    "toast-track-error": "❌ Échec du suivi : {0}",
-    "toast-limit-annotations": "⚠️ Limite Free : Maximum de 3 annotations par vidéo atteint. Achetez Pro pour des annotations illimitées !",
-    "toast-limit-annotations-short": "⚠️ Limite Free : Maximum de 3 annotations par vidéo atteint.",
-    "toast-link-players": "🔗 Ligne de liaison élastique connectée aux deux joueurs !",
-    "toast-attach-player": "🚗 Annotation attachée au joueur ! En route !",
-    "toast-open-folder": "Ouvrir le dossier",
-    "sb-playlist-title": "Playlists Tactiques",
-    "select-playlist-prompt": "-- Choisir une Playlist --",
-    "sb-add-current-btn": "+ Ajouter la Sélection Actuelle",
-    "sb-clips-label": "Clips dans la Playlist",
-    "sb-tagging-title": "Panneau d'Événements",
-    "sb-tag-config": "Configurer les Raccourcis",
-    "tag-info-desc": "Appuyez sur les touches du clavier pour marquer les événements rétroactivement (5s avant à 3s après).",
-    "sb-tagged-events": "Événements Enregistrés",
-    "tag-new-event": "Nouvel Événement",
     "title-playlist": "Playlist",
     "title-tagging": "Événements",
     "title-create-pl": "Créer une Playlist",
@@ -424,12 +465,75 @@ const appTranslations = {
     "title-redo": "Refaire (Ctrl+Y)",
     "title-clear-all": "Tout Effacer",
     "title-add-shortcut": "Ajouter un Raccourci",
+    "title-export-csv": "Exporter les Événements en CSV (📤)",
+    "title-import-metrica": "Importer des Événements en CSV (📥)",
     "title-clipin-set": "Début: {0} (I)",
     "title-clipout-set": "Fin: {0} (O)",
     "title-cut-ready": "Couper {0} → {1} ({2}s) — X",
-    "title-edit-count": "Mode dessin (E) — {0} annotation(s)"
+    "title-edit-count": "Mode dessin (E) — {0} annotation(s)",
+    "license-badge-free": "Activer Pro ⚡",
+    "license-badge-pro": "PRO ACTIF ✓",
+    "license-placeholder": "Ex: 490A40CB-B120-4993-BEA7-...",
+    "toast-license-input": "⚠️ Veuillez saisir une clé de licence !",
+    "toast-license-checking": "⏳ Vérification de la clé...",
+    "toast-license-activated": "✅ FieldVision Pro activé avec succès !",
+    "toast-license-deactivating": "⏳ Désactivation de la licence...",
+    "toast-license-deactivated": "✅ Licence désactivée.",
+    "toast-license-error": "❌ Échec : {0}",
+    "toast-load-success": "📂 {0} annotation(s) chargée(s)",
+    "toast-limit-export": "⚠️ Limite Free : Vous avez atteint la limite mensuelle de 3 exportations. Achetez Pro pour des exportations illimitées !",
+    "toast-select-duration": "❌ Sélectionnez au moins 0.5 seconde",
+    "toast-export-success": "✅ {0}{1}",
+    "toast-export-error": "❌ Échec : {0}",
+    "toast-limit-track": "⚠️ Limite d'essai : Vous avez déjà utilisé le suivi 5 fois. Achetez Pro pour un usage illimité !",
+    "toast-track-free-limit": "⚠️ Suivi Free limité à 2 secondes de clip...",
+    "toast-track-analyzing": "🎯 Analyse et verrouillage du mouvement sur le joueur...",
+    "toast-track-success-trial": "🎉 Suivi terminé (Essai {0} sur 5). Achetez Pro !",
+    "toast-track-success-pro": "✅ Suivi terminé : {0} points enregistrés !",
+    "toast-track-error": "❌ Échec du suivi : {0}",
+    "toast-limit-annotations": "⚠️ Limite Free : Maximum de 3 annotations par vidéo atteint. Achetez Pro pour des annotations illimitées !",
+    "toast-limit-annotations-short": "⚠️ Limite Free : Maximum de 3 annotations par vidéo atteint.",
+    "toast-link-players": "🔗 Ligne de liaison élastique connectée aux deux joueurs !",
+    "toast-attach-player": "🚗 Annotation attachée au joueur !",
+    "toast-ann-removed": "🗑️ Annotation supprimée",
+    "toast-open-folder": "Ouvrir le dossier",
+    "toast-preparing-video": "⏳ Préparation de la vidéo...",
+    "toast-transcoding": "⏳ Conversion de la vidéo au format compatible ({0}%)...",
+    "toast-video-loaded": "✅ Vidéo chargée avec succès !",
+    "toast-video-err": "❌ Erreur de conversion : {0}",
+    "toast-playback-err": "❌ Erreur de lecture : {0}",
+    "toast-set-in-out": "❌ Définissez d'abord les points In (I) et Out (O) sur la timeline",
+    "toast-clip-added-pl": "✅ Clip ajouté à la playlist avec succès !",
+    "toast-pl-empty": "❌ La playlist est vide.",
+    "toast-pl-invalid": "❌ {0} clip(s) avec chemin vidéo invalide.",
+    "toast-pl-prep": "⏳ Préparation de {0} clip(s) avec annotations…",
+    "toast-pl-exporting": "⏳ Exportation de {0} clip(s)…",
+    "toast-pl-success": "✅ Playlist exportée avec succès !",
+    "toast-auto-pause": "⏸️ Pause automatique d'analyse",
+    "toast-event-tagged": "🏷️ Événement marqué : {0}",
+    "toast-event-added-pl": "✅ Événement ajouté à la playlist !",
+    "toast-event-already-pl": "ℹ️ Cet événement est déjà dans la playlist",
+    "toast-sc-min": "⚠️ Vous devez avoir au moins 1 raccourci configuré",
+    "toast-sc-limit": "⚠️ Limite atteinte : Vous ne pouvez configurer que les raccourcis 1 à 9",
+    "toast-sc-added": "✅ Raccourci (Touche {0}) ajouté ! Saisissez le nom ci-dessous.",
+    "toast-export-csv-empty": "⚠️ Aucun événement enregistré à exporter !",
+    "toast-export-csv-success": "✅ {0} événements exportés avec succès !",
+    "toast-import-csv-success": "✅ {0} événements importés avec succès du CSV !",
+    "toast-import-csv-empty": "⚠️ Fichier CSV vide ou sans données valides.",
+    "toast-import-csv-cols": "⚠️ Impossible de reconnaître les colonnes du CSV.",
+    "toast-cutting-render": "✂️ Traitement et incrustation des éléments sur la vidéo...",
+    "toast-cutting-fast": "✂️ Découpage en cours...",
+    "sb-playlist-title": "Playlists Tactiques",
+    "select-playlist-prompt": "-- Choisir une Playlist --",
+    "sb-add-current-btn": "+ Ajouter la Sélection Actuelle",
+    "sb-clips-label": "Clips dans la Playlist",
+    "sb-tagging-title": "Panneau d'Événements",
+    "sb-tag-config": "Configurer les Raccourcis",
+    "tag-info-desc": "Appuyez sur les touches du clavier pour marquer les événements rétroactivement (5s avant à 3s après).",
+    "sb-tagged-events": "Événements Enregistrés",
+    "tag-new-event": "Nouvel Événement"
   },
-  de: {
+  "de": {
     "empty-title": "Keine Videodatei geladen",
     "empty-desc": "Öffnen Sie ein Video, um zu beginnen",
     "empty-btn": "Video Öffnen",
@@ -442,11 +546,13 @@ const appTranslations = {
     "dp-redo": "↻ Wiederholen",
     "dp-clear": "Löschen",
     "filename-empty": "—",
+    "select-all": "Alle Auswählen",
+    "placeholder-playlist-name": "Playlist-Name...",
     "modal-title": "FieldVision Lizenzierung",
     "modal-status": "Status: ",
     "status-free": "Testversion (Free)",
     "status-pro": "Pro Aktiv",
-    "modal-inst-free": "Geben Sie Ihren Pro-Schlüssel ein, der von Lemon Squeezy gesendet wurde, um Wasserzeichen zu entfernen und unbegrenzte Anmerkungen sowie KI-Tracking freizuschalten.",
+    "modal-inst-free": "Geben Sie Ihren Pro-Schlüssel ein, der von Lemon Squeezy gesendet wurde, um Wasserzeichen zu entfernen und unbegrenzte Anmerkungen und Tracking freizuschalten.",
     "modal-inst-pro": "Ihre Pro-Lizenz ist auf diesem Computer aktiv und validiert. Vielen Dank für Ihre Unterstützung!",
     "btn-activate": "FieldVision Pro Aktivieren",
     "btn-deactivate": "Lizenz Deaktivieren",
@@ -455,9 +561,7 @@ const appTranslations = {
     "modal-buy-text": "Haben Sie noch keinen Schlüssel? ",
     "modal-buy-link": "Pro-Lizenz kaufen (€29/Jahr)",
     "toast-tracker-select": "Klicken und ziehen Sie auf der Leinwand, um ein Kästchen um den zu verfolgenden Spieler zu zeichnen.",
-    "toast-tracker-active": "KI verfolgt Spieler... Drücken Sie eine beliebige Taste, um zu stoppen.",
-    
-    // Titles
+    "toast-tracker-active": "Spieler wird verfolgt... Drücken Sie eine beliebige Taste, um zu stoppen.",
     "title-activate": "FieldVision Pro Aktivieren",
     "title-minimize": "Minimieren",
     "title-maximize": "Maximieren",
@@ -468,7 +572,7 @@ const appTranslations = {
     "title-arrow": "Pfeil",
     "title-circle": "Kreis",
     "title-rect": "Rechteck",
-    "title-track": "Spieler verfolgen (KI/OpenCV)",
+    "title-track": "Spieler verfolgen (Ziel 🎯)",
     "title-open": "Datei öffnen",
     "title-play": "Wiedergabe / Pause",
     "title-stop": "Stoppen",
@@ -479,44 +583,6 @@ const appTranslations = {
     "title-cut": "Schneiden und speichern (X)",
     "title-edit": "Zeichenmodus (E)",
     "title-fs": "Vollbild",
-    
-    // License states
-    "license-badge-free": "Pro Aktivieren ⚡",
-    "license-badge-pro": "PRO AKTIV ✓",
-    "license-placeholder": "Ex: 490A40CB-B120-4993-BEA7-...",
-    
-    // Toasts
-    "toast-license-input": "⚠️ Bitte geben Sie einen Lizenzschlüssel ein!",
-    "toast-license-checking": "⏳ Schlüssel wird überprüft...",
-    "toast-license-activated": "✅ FieldVision Pro erfolgreich aktiviert!",
-    "toast-license-deactivating": "⏳ Lizenz wird deaktiviert...",
-    "toast-license-deactivated": "✅ Lizenz deaktiviert.",
-    "toast-license-error": "❌ Fehler: {0}",
-    "toast-load-success": "📂 {0} Anmerkung(en) geladen",
-    "toast-limit-export": "⚠️ Free-Limit: Sie haben das monatliche Limit von 3 Exporten erreicht. Kaufen Sie Pro für unbegrenzte Exporte!",
-    "toast-select-duration": "❌ Wählen Sie mindestens 0.5 Sekunden aus",
-    "toast-export-success": "✅ {0}{1}",
-    "toast-export-error": "❌ Fehler: {0}",
-    "toast-limit-track": "⚠️ Test-Limit: Sie haben das automatische Tracking bereits 5 Mal verwendet. Kaufen Sie Pro für unbegrenzte Nutzung!",
-    "toast-track-free-limit": "⚠️ Free-Tracking auf 2 Sekunden Clip begrenzt...",
-    "toast-track-analyzing": "🎯 Spielerbewegung wird analysiert und fixiert...",
-    "toast-track-success-trial": "🎉 Tracking abgeschlossen (Test {0} von 5). Kaufen Sie Pro!",
-    "toast-track-success-pro": "✅ Tracking abgeschlossen: {0} Punkte aufgezeichnet!",
-    "toast-track-error": "❌ Tracking fehlgeschlagen: {0}",
-    "toast-limit-annotations": "⚠️ Free-Limit: Maximum von 3 Anmerkungen pro Video erreicht. Kaufen Sie Pro für unbegrenzte Anmerkungen!",
-    "toast-limit-annotations-short": "⚠️ Free-Limit: Maximum von 3 Anmerkungen pro Video erreicht.",
-    "toast-link-players": "🔗 Elastische Verbindungslinie zwischen beiden Spielern aktiv!",
-    "toast-attach-player": "🚗 Anmerkung an Spieler angeheftet!",
-    "toast-open-folder": "Ordner öffnen",
-    "sb-playlist-title": "Taktische Playlists",
-    "select-playlist-prompt": "-- Playlist Auswählen --",
-    "sb-add-current-btn": "+ Aktuelle Auswahl Hinzufügen",
-    "sb-clips-label": "Clips in der Playlist",
-    "sb-tagging-title": "Ereignis-Panel",
-    "sb-tag-config": "Tastenkombinationen Konfigurieren",
-    "tag-info-desc": "Drücken Sie die Tasten auf der Tastatur, um Ereignisse rückwirkend zu markieren (5s vor bis 3s danach).",
-    "sb-tagged-events": "Registrierte Ereignisse",
-    "tag-new-event": "Neues Ereignis",
     "title-playlist": "Playlist",
     "title-tagging": "Ereignisse",
     "title-create-pl": "Playlist Erstellen",
@@ -528,10 +594,73 @@ const appTranslations = {
     "title-redo": "Wiederholen (Ctrl+Y)",
     "title-clear-all": "Alles Löschen",
     "title-add-shortcut": "Tastenkürzel Hinzufügen",
+    "title-export-csv": "Ereignisse als CSV Exportieren (📤)",
+    "title-import-metrica": "CSV-Ereignisse Importieren (📥)",
     "title-clipin-set": "Anfang: {0} (I)",
     "title-clipout-set": "Ende: {0} (O)",
     "title-cut-ready": "Schneiden {0} → {1} ({2}s) — X",
-    "title-edit-count": "Zeichenmodus (E) — {0} Anmerkung(en)"
+    "title-edit-count": "Zeichenmodus (E) — {0} Anmerkung(en)",
+    "license-badge-free": "Pro Aktivieren ⚡",
+    "license-badge-pro": "PRO AKTIV ✓",
+    "license-placeholder": "Ex: 490A40CB-B120-4993-BEA7-...",
+    "toast-license-input": "⚠️ Bitte geben Sie einen Lizenzschlüssel ein!",
+    "toast-license-checking": "⏳ Schlüssel wird überprüft...",
+    "toast-license-activated": "✅ FieldVision Pro erfolgreich aktiviert!",
+    "toast-license-deactivating": "⏳ Lizenz wird deaktiviert...",
+    "toast-license-deactivated": "✅ Lizenz deaktiviert.",
+    "toast-license-error": "❌ Fehler: {0}",
+    "toast-load-success": "📂 {0} Anmerkung(en) geladen",
+    "toast-limit-export": "⚠️ Free-Limit: Sie haben das monatliche Limit von 3 Exporten erreicht. Kaufen Sie Pro für unbegrenzte Exporte!",
+    "toast-select-duration": "❌ Wählen Sie mindestens 0.5 Sekunden aus",
+    "toast-export-success": "✅ {0}{1}",
+    "toast-export-error": "❌ Fehler: {0}",
+    "toast-limit-track": "⚠️ Test-Limit: Sie haben das Tracking bereits 5 Mal verwendet. Kaufen Sie Pro für unbegrenzte Nutzung!",
+    "toast-track-free-limit": "⚠️ Free-Tracking auf 2 Sekunden Clip begrenzt...",
+    "toast-track-analyzing": "🎯 Spielerbewegung wird analysiert und fixiert...",
+    "toast-track-success-trial": "🎉 Tracking abgeschlossen (Test {0} von 5). Kaufen Sie Pro!",
+    "toast-track-success-pro": "✅ Tracking abgeschlossen: {0} Punkte aufgezeichnet!",
+    "toast-track-error": "❌ Tracking fehlgeschlagen: {0}",
+    "toast-limit-annotations": "⚠️ Free-Limit: Maximum von 3 Anmerkungen pro Video erreicht. Kaufen Sie Pro für unbegrenzte Anmerkungen!",
+    "toast-limit-annotations-short": "⚠️ Free-Limit: Maximum von 3 Anmerkungen pro Video erreicht.",
+    "toast-link-players": "🔗 Elastische Verbindungslinie zwischen beiden Spielern aktiv!",
+    "toast-attach-player": "🚗 Anmerkung an Spieler angeheftet!",
+    "toast-ann-removed": "🗑️ Markierung entfernt",
+    "toast-open-folder": "Ordner öffnen",
+    "toast-preparing-video": "⏳ Video wird vorbereitet...",
+    "toast-transcoding": "⏳ Video wird in kompatibles Format konvertiert ({0}%)...",
+    "toast-video-loaded": "✅ Video erfolgreich geladen!",
+    "toast-video-err": "❌ Fehler beim Konvertieren des Videos: {0}",
+    "toast-playback-err": "❌ Fehler bei der Videowiedergabe: {0}",
+    "toast-set-in-out": "❌ Setzen Sie zuerst In- (I) und Out- (O) Punkte auf der Timeline",
+    "toast-clip-added-pl": "✅ Clip erfolgreich zur Playlist hinzugefügt!",
+    "toast-pl-empty": "❌ Die Playlist ist leer.",
+    "toast-pl-invalid": "❌ {0} Clip(s) mit ungültigem Videopfad.",
+    "toast-pl-prep": "⏳ {0} Clip(s) mit Anmerkungen werden vorbereitet…",
+    "toast-pl-exporting": "⏳ {0} Clip(s) werden exportiert…",
+    "toast-pl-success": "✅ Playlist erfolgreich exportiert!",
+    "toast-auto-pause": "⏸️ Automatische Analysepause",
+    "toast-event-tagged": "🏷️ Ereignis markiert: {0}",
+    "toast-event-added-pl": "✅ Ereignis zur Playlist hinzugefügt!",
+    "toast-event-already-pl": "ℹ️ Dieses Ereignis ist bereits in der Playlist",
+    "toast-sc-min": "⚠️ Sie müssen mindestens 1 Tastenkombination konfiguriert haben",
+    "toast-sc-limit": "⚠️ Limit erreicht: Sie können nur Tastenkombinationen 1 bis 9 konfigurieren",
+    "toast-sc-added": "✅ Tastenkombination (Taste {0}) hinzugefügt! Namen unten eingeben.",
+    "toast-export-csv-empty": "⚠️ Keine registrierten Ereignisse zum Exportieren!",
+    "toast-export-csv-success": "✅ {0} Ereignisse erfolgreich exportiert!",
+    "toast-import-csv-success": "✅ {0} Ereignisse erfolgreich aus CSV importiert!",
+    "toast-import-csv-empty": "⚠️ CSV-Datei leer oder ohne gültige Daten.",
+    "toast-import-csv-cols": "⚠️ CSV-Spalten konnten nicht erkannt werden.",
+    "toast-cutting-render": "✂️ Elemente werden verarbeitet und ins Video eingebrannt...",
+    "toast-cutting-fast": "✂️ Schneiden...",
+    "sb-playlist-title": "Taktische Playlists",
+    "select-playlist-prompt": "-- Playlist Auswählen --",
+    "sb-add-current-btn": "+ Aktuelle Auswahl Hinzufügen",
+    "sb-clips-label": "Clips in der Playlist",
+    "sb-tagging-title": "Ereignis-Panel",
+    "sb-tag-config": "Tastenkombinationen Konfigurieren",
+    "tag-info-desc": "Drücken Sie die Tasten auf der Tastatur, um Ereignisse rückwirkend zu markieren (5s vor bis 3s danach).",
+    "sb-tagged-events": "Registrierte Ereignisse",
+    "tag-new-event": "Neues Ereignis"
   }
 };
 
@@ -593,7 +722,7 @@ function setAppLanguage(lang) {
     statusVal.textContent = appTranslations[lang][isPro ? 'status-pro' : 'status-free'];
   }
   if (typeof loadPlaylists === 'function') {
-    loadPlaylists();
+    try { localStorage.removeItem('fv_playlists'); } catch(e){} loadPlaylists();
   }
 }
 
@@ -722,7 +851,7 @@ btnActivateLicense.addEventListener('click', async () => {
     return;
   }
   
-  showToast('🔑 A verificar chave...', 0);
+  showToast(t('toast-license-checking', '⏳ A verificar chave...'), 0);
   btnActivateLicense.disabled = true;
   
   const res = await ipcRenderer.invoke('activate-license', key);
@@ -740,10 +869,10 @@ setAppLanguage(currentAppLang);
 
 btnDeactivateLicense.addEventListener('click', async () => {
   if (confirm('Tem a certeza que deseja desativar a licença neste computador?')) {
-    showToast('🔒 A remover licença...', 0);
+    showToast(t('toast-license-deactivating', '⏳ A remover licença...'), 0);
     const res = await ipcRenderer.invoke('deactivate-license');
     if (res.success) {
-      showToast('ℹ️ Licença desativada.', 3000);
+      showToast(t('toast-license-deactivated', '✅ Licença desativada.'), 3000);
       checkLicense();
 setAppLanguage(currentAppLang);
       licenseModal.classList.remove('open');
@@ -838,10 +967,10 @@ async function startTranscoding(filePath) {
   if (isTranscoding) return
   isTranscoding = true
   
-  showToast('⏳ A preparar vídeo...', 0)
+  showToast(t('toast-preparing-video', '⏳ A preparar vídeo...'), 0)
   
   const progressListener = (event, { percent }) => {
-    showToast(`⏳ A converter vídeo para formato compatível (${percent}%)...`, 0)
+    showToast(t('toast-transcoding', '⏳ A converter vídeo para formato compatível ({0}%)...', percent), 0)
   }
   ipcRenderer.on('transcode-progress', progressListener)
   
@@ -859,17 +988,17 @@ async function startTranscoding(filePath) {
       video.load()
       video.play()
       
-      showToast('✅ Vídeo carregado com sucesso!', 3000)
+      showToast(t('toast-video-loaded', '✅ Vídeo carregado com sucesso!'), 3000)
       
       // Auto-load annotations
       setTimeout(() => loadAnnotations(filePath), 400)
     } else {
-      showToast('❌ Erro ao converter vídeo: ' + res.error, 5000)
+      showToast(t('toast-video-err', '❌ Erro ao converter vídeo: {0}', res.error), 5000)
     }
   } catch (err) {
     ipcRenderer.removeListener('transcode-progress', progressListener)
     isTranscoding = false
-    showToast('❌ Falha na transcodificação: ' + err.message, 5000)
+    showToast(t('toast-video-err', '❌ Falha na transcodificação: {0}', err.message), 5000)
   }
 }
 
@@ -908,7 +1037,7 @@ video.addEventListener('error', async () => {
   } else {
     const err = video.error
     const msg = err ? `Código ${err.code}: ${err.message || 'Erro de descodificação'}` : 'Erro desconhecido'
-    showToast('❌ Erro ao reproduzir vídeo: ' + msg, 5000)
+    showToast(t('toast-playback-err', '❌ Erro ao reproduzir vídeo: {0}', msg), 5000)
   }
 })
 
@@ -1058,7 +1187,8 @@ async function saveAnnotations() {
       videoPath:   clip.inputPath,
       annotations: ds.annotations,
       taggedEvents: taggedEvents,
-      shortcutKeys: shortcutKeys
+      shortcutKeys: shortcutKeys,
+      playlists:   playlists
     })
   } catch (e) {
     console.warn('Could not save annotations:', e)
@@ -1131,6 +1261,20 @@ async function loadAnnotations(videoPath) {
     if (typeof renderShortcutList === 'function') {
       renderShortcutList()
     }
+
+    // Carregar Playlists exclusivas para este vídeo
+    const videoStorageKey = 'fv_playlists_' + Buffer.from(videoPath).toString('hex');
+    let savedVideoPlaylists = null;
+    try {
+      savedVideoPlaylists = JSON.parse(localStorage.getItem(videoStorageKey));
+    } catch(e){}
+    
+    playlists = (result.playlists && result.playlists.length > 0) 
+      ? result.playlists 
+      : (savedVideoPlaylists && savedVideoPlaylists.length > 0 ? savedVideoPlaylists : []);
+      
+    activePlaylistId = playlists.length > 0 ? playlists[0].id : null;
+    loadPlaylists();
     
     if (result.success && result.annotations && result.annotations.length > 0) {
       ds.annotations = result.annotations
@@ -1458,7 +1602,8 @@ btnEditMode.addEventListener('click', toggleEditMode)
 
 // Selectors
 document.querySelectorAll('.dp-tool[data-tool]').forEach(btn => {
-  btn.addEventListener('click', () => { document.querySelectorAll('.dp-tool[data-tool]').forEach(b => b.classList.remove('active')); btn.classList.add('active'); ds.tool = btn.dataset.tool })
+  btn.addEventListener('click', () => { document.querySelectorAll('.dp-tool[data-tool]').forEach(b => b.classList.remove('active')); btn.classList.add('active'); ds.tool = btn.dataset.tool
+     })
 })
 document.querySelectorAll('.dp-color').forEach(s => {
   s.addEventListener('click', () => { document.querySelectorAll('.dp-color').forEach(x => x.classList.remove('active')); s.classList.add('active'); ds.color = s.dataset.color })
@@ -1571,13 +1716,87 @@ function findTouchingTrack(px, py, t) {
   return null
 }
 
-// Mouse drawing
+// Remove specific annotation at point (px, py)
+function removeAnnotationAt(px, py) {
+  const t = video.currentTime || 0;
+  for (let i = ds.annotations.length - 1; i >= 0; i--) {
+    const ann = ds.annotations[i];
+    if (!isVisible(ann, t)) continue;
+
+    if (ann.tool === 'track' && ann.trajectory) {
+      const pos = getTrackCenterAtTime(ann, t);
+      if (pos) {
+        const hitRadius = Math.max(55, (pos.pw || 30) * 1.6);
+        const dist = Math.hypot(px - pos.x, py - pos.y);
+        if (dist <= hitRadius) {
+          const removed = ds.annotations.splice(i, 1)[0];
+          ds.redoStack.push(removed);
+          redraw();
+          updateTimelineMarkers();
+          updateAnnotationBadge();
+          scheduleAnnotationSave();
+          showToast(t('toast-ann-removed', '🗑️ Marcação removida'), 2000);
+          return true;
+        }
+      }
+    } else if (ann.x1 !== undefined && ann.x2 !== undefined) {
+      const minX = Math.min(ann.x1, ann.x2) - 20;
+      const maxX = Math.max(ann.x1, ann.x2) + 20;
+      const minY = Math.min(ann.y1, ann.y2) - 20;
+      const maxY = Math.max(ann.y1, ann.y2) + 20;
+      if (px >= minX && px <= maxX && py >= minY && py <= maxY) {
+        const removed = ds.annotations.splice(i, 1)[0];
+        ds.redoStack.push(removed);
+        redraw();
+        updateTimelineMarkers();
+        updateAnnotationBadge();
+        scheduleAnnotationSave();
+        showToast(t('toast-ann-removed', '🗑️ Marcação removida'), 2000);
+        return true;
+      }
+    } else if (ann.points && ann.points.length > 0) {
+      for (const pt of ann.points) {
+        if (Math.hypot(px - pt.x, py - pt.y) <= 25) {
+          const removed = ds.annotations.splice(i, 1)[0];
+          ds.redoStack.push(removed);
+          redraw();
+          updateTimelineMarkers();
+          updateAnnotationBadge();
+          scheduleAnnotationSave();
+          showToast(t('toast-ann-removed', '🗑️ Marcação removida'), 2000);
+          return true;
+        }
+      }
+    }
+  }
+  return false;
+}
+
+// Mouse drawing & right-click deletion
+canvas.addEventListener('contextmenu', e => {
+  e.preventDefault();
+  if (!ds.enabled) return;
+  const pos = getPos(e);
+  removeAnnotationAt(pos.x, pos.y);
+});
+
 canvas.addEventListener('mousedown', e => {
-  if (!ds.enabled) return; e.preventDefault(); ds.drawing = true
-  const pos = getPos(e)
-  if (ds.tool === 'pencil') ds.current = { tool: 'pencil', color: ds.color, width: ds.width, points: [pos] }
-  else ds.current = { tool: ds.tool, color: ds.color, width: ds.width, x1: pos.x, y1: pos.y, x2: pos.x, y2: pos.y }
-})
+  if (!ds.enabled) return;
+  e.preventDefault();
+
+  if (e.button === 2) {
+    const pos = getPos(e);
+    removeAnnotationAt(pos.x, pos.y);
+    return;
+  }
+
+  if (e.button !== 0) return;
+
+  ds.drawing = true;
+  const pos = getPos(e);
+  if (ds.tool === 'pencil') ds.current = { tool: 'pencil', color: ds.color, width: ds.width, points: [pos] };
+  else ds.current = { tool: ds.tool, color: ds.color, width: ds.width, x1: pos.x, y1: pos.y, x2: pos.x, y2: pos.y };
+});
 
 canvas.addEventListener('mousemove', e => {
   if (!ds.drawing || !ds.enabled || !ds.current) return
@@ -1590,7 +1809,37 @@ canvas.addEventListener('mousemove', e => {
 canvas.addEventListener('mouseup', async e => {
   if (!ds.drawing || !ds.current) return; ds.drawing = false
   const ann = ds.current
-  const isTiny = ann.tool !== 'pencil' && Math.abs(ann.x2-ann.x1) < 3 && Math.abs(ann.y2-ann.y1) < 3
+  let isTiny = ann.tool !== 'pencil' && Math.abs(ann.x2 - ann.x1) < 3 && Math.abs(ann.y2 - ann.y1) < 3
+
+  // 1-Click Player/Ball Tracking
+  if (ann.tool === 'track' && Math.abs(ann.x2 - ann.x1) < 10 && Math.abs(ann.y2 - ann.y1) < 10) {
+    const vRect = getVideoVisualRect()
+    if (vRect) {
+      if (typeof calibrationState !== 'undefined' && calibrationState.isBallMode) {
+        const bSize = Math.max(20, vRect.displayWidth * 0.02)
+        ann.x1 = ann.x1 - bSize / 2
+        ann.x2 = ann.x1 + bSize
+        ann.y1 = ann.y1 - bSize / 2
+        ann.y2 = ann.y1 + bSize
+        ann.isBall = true
+        ann.color = '#ffff00'
+        calibrationState.isBallMode = false
+        const btnBall = document.getElementById('btnToggleBallMode')
+        if (btnBall) btnBall.classList.remove('active')
+      } else {
+        const boxW = Math.max(34, vRect.displayWidth * 0.038)
+        const boxH = Math.max(62, vRect.displayHeight * 0.085)
+        ann.x1 = ann.x1 - boxW / 2
+        ann.x2 = ann.x1 + boxW
+        ann.y1 = ann.y1 - boxH * 0.78
+        ann.y2 = ann.y1 + boxH
+        if (!ann.color || ann.color === '#ffffff') {
+          ann.color = '#00ff88'
+        }
+      }
+      isTiny = false
+    }
+  }
 
   if (!isTiny) {
     ann.id = 'ann_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5)
@@ -1624,7 +1873,7 @@ canvas.addEventListener('mouseup', async e => {
         // Enforce 2-second limit on Free version
         if (!isPro) {
           trackDuration = Math.min(trackDuration, 2.0);
-          showToast('🎯 Rastreio Free limitado a 2 segundos de clipe...', 0);
+          showToast(t('toast-track-free-limit', '⚠️ Rastreio Free limitado a 2 segundos de clipe...'), 3500);
         } else {
           showToast(t('toast-track-analyzing', '🎯 A analisar e fixar movimento no jogador...'), 0);
         }
@@ -1653,12 +1902,12 @@ canvas.addEventListener('mouseup', async e => {
           scheduleAnnotationSave()
           
           if (!isPro) {
-            showToast(`✅ Rastreio concluído (Teste ${trackingTrialCount} de 5). Adquire o Pro!`, 5000);
+            showToast(t('toast-track-success-trial', '🎉 Rastreio concluído (Teste {0} de 5). Adquire o Pro!', trackingTrialCount), 5000);
           } else {
             showToast(t('toast-track-success-pro', '✅ Rastreio concluído: {0} pontos gravados!', result.totalPoints), 3500);
           }
         } else {
-          showToast(`\u274C Falha no rastreio: ${result.error || 'Não foi possível seguir o jogador'}`, 4000)
+          showToast(t('toast-track-error', '❌ Falha no rastreio: {0}', result.error || 'Erro'), 4000)
         }
       }
     } else {
@@ -1856,7 +2105,7 @@ function drawTrackSpotlight(c, ann, t = null) {
   const vRect = getVideoVisualRect()
   if (!vRect) return
 
-  const trackColor = ann.color || '#ffffff'
+  const trackColor = (!ann.color || ann.color.toLowerCase() === '#ffffff') ? '#00ff88' : ann.color
 
   // If currently drawing the bounding box rectangle
   if (!ann.trajectory) {
@@ -1904,12 +2153,45 @@ function drawTrackSpotlight(c, ann, t = null) {
   c.shadowBlur = 12
   c.stroke()
 
-  // Inner fill gradient with custom color + same smooth opacity
+    // Inner fill gradient with custom color + same smooth opacity
   const grad = c.createRadialGradient(px, py, 2, px, py, rx)
   grad.addColorStop(0, hexToRgba(trackColor, 0.42))
   grad.addColorStop(1, hexToRgba(trackColor, 0.0))
   c.fillStyle = grad
   c.fill()
+
+  // ── Draw Jersey Number Badge or Ball Emoji ──
+  if (ann.isBall) {
+    c.font = '12px Outfit, sans-serif'
+    c.textAlign = 'center'
+    c.textBaseline = 'middle'
+    c.fillText('⚽', px, py - ry - 6)
+  } else if (ann.playerNum !== undefined) {
+    const badgeR = 10
+    const badgeY = py - ry - badgeR - 2
+
+    // Badge Circle & Glow
+    c.beginPath()
+    c.arc(px, badgeY, badgeR, 0, Math.PI * 2)
+    c.fillStyle = trackColor
+    c.shadowColor = trackColor
+    c.shadowBlur = 10
+    c.fill()
+
+    // White Border
+    c.strokeStyle = '#ffffff'
+    c.lineWidth = 1.5
+    c.shadowBlur = 0
+    c.stroke()
+
+    // Number text
+    c.fillStyle = '#ffffff'
+    c.font = 'bold 10px Outfit, system-ui, sans-serif'
+    c.textAlign = 'center'
+    c.textBaseline = 'middle'
+    c.fillText(ann.playerNum.toString(), px, badgeY + 0.5)
+  }
+
   c.restore()
 }
 
@@ -1979,23 +2261,50 @@ function drawElasticRectCtx(c, ann) {
   c.restore()
 }
 
-// Timeline markers
+// Timeline markers (Annotations & Tagged Events)
 function updateTimelineMarkers() {
-  document.querySelectorAll('.tl-marker').forEach(m => m.remove())
+  document.querySelectorAll('.tl-marker, .tl-event-marker, .tl-event-range').forEach(m => m.remove())
   if (!video.duration) return
+
+  // 1. Drawing / Annotation markers (colored circles)
   const buckets = new Map()
-  for (const ann of ds.annotations) buckets.set(Math.round(ann.timestamp*2), ann)
+  for (const ann of ds.annotations) buckets.set(Math.round(ann.timestamp * 2), ann)
   for (const [, ann] of buckets) {
-    const pct = ann.timestamp / video.duration * 100
+    const pct = (ann.timestamp / video.duration) * 100
     const m   = document.createElement('div')
-    m.className = 'tl-marker'; m.style.left = pct+'%'
-    m.style.background = ann.color; m.style.boxShadow = `0 0 7px ${ann.color}dd, 0 0 2px ${ann.color}`
+    m.className = 'tl-marker'
+    m.style.left = pct + '%'
+    m.style.background = ann.color || '#00ff88'
+    m.style.boxShadow = `0 0 7px ${ann.color || '#00ff88'}dd, 0 0 2px ${ann.color || '#00ff88'}`
     m.title = formatTime(ann.timestamp)
     m.addEventListener('click', ev => {
-      ev.stopPropagation(); video.currentTime = ann.timestamp
-      updateProgress(pct); timeCurrent.textContent = formatTime(ann.timestamp); redraw()
+      ev.stopPropagation()
+      video.currentTime = ann.timestamp
+      updateProgress(pct)
+      timeCurrent.textContent = formatTime(ann.timestamp)
+      redraw()
     })
     progressBar.appendChild(m)
+  }
+
+  // 2. Tagged Event markers (golden diamond markers)
+  if (typeof taggedEvents !== 'undefined' && Array.isArray(taggedEvents)) {
+    taggedEvents.forEach(ev => {
+      const evPct = Math.max(0, Math.min(100, (ev.time / video.duration) * 100))
+      const marker = document.createElement('div')
+      marker.className = 'tl-event-marker'
+      marker.style.left = evPct + '%'
+      marker.title = `🏷️ ${ev.name} (${formatTime(ev.time)})`
+      marker.addEventListener('click', e => {
+        e.stopPropagation()
+        video.currentTime = ev.inTime !== undefined ? ev.inTime : ev.time
+        updateProgress((video.currentTime / video.duration) * 100)
+        timeCurrent.textContent = formatTime(video.currentTime)
+        redraw()
+        showToast(`🏷️ Evento: ${ev.name}`, 2000)
+      })
+      progressBar.appendChild(marker)
+    })
   }
 }
 
@@ -2271,13 +2580,17 @@ if (btnToggleTagging && taggingSidebar) {
   });
 }
 
-// 2. Criar e gerir Playlists
+// 2. Criar e gerir Playlists (Específicas por Vídeo)
 function loadPlaylists() {
   if (!playlistSelect) return;
-  try {
-    playlists = JSON.parse(localStorage.getItem('fv_playlists') || '[]');
-  } catch (e) {
+  
+  if (!clip.inputPath) {
     playlists = [];
+    activePlaylistId = null;
+    playlistSelect.innerHTML = '<option value="">-- ' + (appTranslations[currentAppLang] && appTranslations[currentAppLang]['select-playlist-prompt'] || 'Escolher Playlist') + ' --</option>';
+    updatePlaylistButtons();
+    renderClips();
+    return;
   }
   
   // Limpar select e popular
@@ -2288,6 +2601,16 @@ function loadPlaylists() {
   defaultOpt.textContent = (appTranslations[currentAppLang] && appTranslations[currentAppLang]['select-playlist-prompt']) || '-- Escolher Playlist --';
   playlistSelect.appendChild(defaultOpt);
   
+  // Garantir que existe pelo menos uma Playlist 1 caso a lista esteja vazia para este vídeo
+  if (!playlists || playlists.length === 0) {
+    playlists = [{
+      id: 'playlist_' + Date.now(),
+      name: 'Playlist 1',
+      clips: []
+    }];
+    savePlaylists();
+  }
+  
   playlists.forEach(pl => {
     const opt = document.createElement('option');
     opt.value = pl.id;
@@ -2295,15 +2618,24 @@ function loadPlaylists() {
     playlistSelect.appendChild(opt);
   });
   
+  if (!activePlaylistId || !playlists.find(p => p.id === activePlaylistId)) {
+    activePlaylistId = playlists.length > 0 ? playlists[0].id : null;
+  }
+  
   if (activePlaylistId) {
     playlistSelect.value = activePlaylistId;
   }
   
   updatePlaylistButtons();
+  renderClips();
 }
 
 function savePlaylists() {
-  localStorage.setItem('fv_playlists', JSON.stringify(playlists));
+  if (!clip.inputPath) return;
+  // Guardar no ficheiro local de anotações do vídeo e no storage específico deste vídeo
+  const videoStorageKey = 'fv_playlists_' + Buffer.from(clip.inputPath).toString('hex');
+  localStorage.setItem(videoStorageKey, JSON.stringify(playlists));
+  saveAnnotations();
 }
 
 function updatePlaylistButtons() {
@@ -2438,7 +2770,7 @@ if (btnAddCurrentToPlaylist) {
   btnAddCurrentToPlaylist.addEventListener('click', () => {
     if (!activePlaylistId || !clip.inputPath) return;
     if (clip.inTime === null || clip.outTime === null) {
-      showToast("❌ Define primeiro o ponto de In (I) e Out (O) na barra de tempo", 3000);
+      showToast(t("toast-set-in-out", "❌ Define primeiro o ponto de In (I) e Out (O) na barra de tempo"), 3000);
       return;
     }
     
@@ -2486,7 +2818,7 @@ if (btnAddCurrentToPlaylist) {
     });
     savePlaylists();
     renderClips();
-    showToast("✅ Clip adicionado à playlist com sucesso!", 3000);
+    showToast(t("toast-clip-added-pl", "✅ Clip adicionado à playlist com sucesso!"), 3000);
   });
 }
 
@@ -2668,20 +3000,20 @@ if (btnExportPlaylist) {
     if (!activePlaylistId) return;
     const currentPl = playlists.find(p => p.id === activePlaylistId);
     if (!currentPl || !currentPl.clips || currentPl.clips.length === 0) {
-      showToast('❌ A playlist está vazia.', 3000);
+      showToast(t('toast-pl-empty', '❌ A playlist está vazia.'), 3000);
       return;
     }
 
     // Validate all clips have a valid videoPath
     const invalid = currentPl.clips.filter(cl => !cl.videoPath);
     if (invalid.length > 0) {
-      showToast(`❌ ${invalid.length} clip(s) sem caminho de vídeo válido.`, 3000);
+      showToast(t('toast-pl-invalid', '❌ {0} clip(s) sem caminho de vídeo válido.', invalid.length), 3000);
       return;
     }
 
     btnExportPlaylist.disabled = true;
     btnExportPlaylist.textContent = t('btn-exporting', '⏳ A exportar...');
-    showToast(`⏳ A preparar ${currentPl.clips.length} clip(s) com marcações…`, 0);
+    showToast(t('toast-pl-prep', '⏳ A preparar {0} clip(s) com marcações…', currentPl.clips.length), 0);
 
     const vRect = getVideoVisualRect();
     const exportClips = [];
@@ -2704,7 +3036,7 @@ if (btnExportPlaylist) {
       });
     }
 
-    showToast(`⏳ A exportar ${currentPl.clips.length} clip(s)…`, 0);
+    showToast(t('toast-pl-exporting', '⏳ A exportar {0} clip(s)…', currentPl.clips.length), 0);
 
     const result = await ipcRenderer.invoke('export-playlist', {
       clips: exportClips
@@ -2714,9 +3046,9 @@ if (btnExportPlaylist) {
     updatePlaylistButtons();
 
     if (result.success) {
-      showToast('✅ Playlist exportada com sucesso!', 6000, result.outputPath);
+      showToast(t('toast-pl-success', '✅ Playlist exportada com sucesso!'), 6000, result.outputPath);
     } else if (result.error !== 'Cancelado') {
-      showToast(`❌ Erro ao exportar: ${result.error}`, 5000);
+      showToast(t('toast-export-error', '❌ Erro: {0}', result.error), 5000);
     } else {
       toast.classList.remove('show');
     }
@@ -2760,7 +3092,7 @@ function checkAutoPause() {
     if (Math.abs(video.currentTime - ann.timestamp) < 0.15 && Math.abs(video.currentTime - lastPausedTime) > 1.2) {
       video.pause();
       lastPausedTime = video.currentTime;
-      showToast("⏸️ Pausa automática de análise", 2000);
+      showToast(t("toast-auto-pause", "⏸️ Pausa automática de análise"), 2000);
     }
   });
 }
@@ -2790,6 +3122,7 @@ function handleTagEvent(key) {
   
   taggedEvents.push(newEvent);
   renderTaggedEvents();
+  updateTimelineMarkers();
   saveAnnotations(); // Persistir imediatamente na base de dados local do vídeo!
   
   // Adicionar também automaticamente à playlist ativa, caso exista uma selecionada
@@ -2822,17 +3155,80 @@ function handleTagEvent(key) {
     }
   }
   
-  showToast(`🏷️ Evento marcado: ${eventName}`, 3000);
+  showToast(t('toast-event-tagged', '🏷️ Evento marcado: {0}', eventName), 3000);
 }
 
-// 8. Renderizar lista de eventos registados
+// 8. Renderizar lista de eventos registados (com seleção múltipla e Selecionar Tudo)
+let selectedEventIndices = new Set();
+
+function updateEventsHeader() {
+  const eventsHeader = document.getElementById('eventsHeader');
+  const checkAll = document.getElementById('checkSelectAllEvents');
+  const btnDel = document.getElementById('btnDeleteSelectedEvents');
+  const btnAddPl = document.getElementById('btnAddSelectedEventsToPlaylist');
+  
+  if (!eventsHeader) return;
+  
+  if (!taggedEvents || taggedEvents.length === 0) {
+    eventsHeader.style.display = 'none';
+    selectedEventIndices.clear();
+    return;
+  }
+  
+  eventsHeader.style.display = 'flex';
+  const total = taggedEvents.length;
+  const count = selectedEventIndices.size;
+  
+  if (checkAll) {
+    checkAll.checked = count > 0 && count === total;
+    checkAll.indeterminate = count > 0 && count < total;
+  }
+  
+  if (btnDel) {
+    btnDel.style.display = count > 0 ? 'inline-block' : 'none';
+    if (count > 0) btnDel.textContent = `🗑️ (${count})`;
+  }
+  
+  if (btnAddPl) {
+    btnAddPl.style.display = count > 0 ? 'inline-block' : 'none';
+    if (count > 0) btnAddPl.textContent = `➕ Playlist (${count})`;
+  }
+}
+
 function renderTaggedEvents() {
   if (!taggedEventsList) return;
   taggedEventsList.innerHTML = '';
   
+  // Limpar índices fora do limite
+  selectedEventIndices = new Set([...selectedEventIndices].filter(i => i < taggedEvents.length));
+  
   taggedEvents.forEach((ev, index) => {
     const li = document.createElement('li');
     li.className = 'event-item';
+    if (selectedEventIndices.has(index)) {
+      li.classList.add('selected');
+    }
+    
+    // Checkbox de seleção individual
+    const chk = document.createElement('input');
+    chk.type = 'checkbox';
+    chk.className = 'event-select-check';
+    chk.checked = selectedEventIndices.has(index);
+    chk.style.marginRight = '8px';
+    chk.style.cursor = 'pointer';
+    chk.style.flexShrink = '0';
+    
+    chk.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (chk.checked) {
+        selectedEventIndices.add(index);
+        li.classList.add('selected');
+      } else {
+        selectedEventIndices.delete(index);
+        li.classList.remove('selected');
+      }
+      updateEventsHeader();
+    });
     
     const details = document.createElement('div');
     details.className = 'event-details';
@@ -2857,25 +3253,22 @@ function renderTaggedEvents() {
     editBtn.style.cursor = 'pointer';
     
     editBtn.addEventListener('click', (e) => {
-      e.stopPropagation(); // Evitar reprodução do clip
+      e.stopPropagation();
       
-      // Criar input in-place
       const input = document.createElement('input');
       input.type = 'text';
       input.className = 'sc-name-input';
       input.style.fontSize = '12px';
       input.style.padding = '2px 6px';
       input.style.width = '160px';
-      input.maxLength = 40; // Limite de 40 caracteres
+      input.maxLength = 40;
       input.value = ev.name;
       
       const saveChange = () => {
         const oldName = ev.name;
         ev.name = input.value.trim() || ev.name;
         
-        // Se mudou o nome, guardar alterações!
         if (oldName !== ev.name) {
-          // Atualizar o nome correspondente na playlist também se aplicável
           playlists.forEach(pl => {
             pl.clips.forEach(cl => {
               if (cl.inTime === ev.inTime && cl.outTime === ev.outTime) {
@@ -2886,19 +3279,16 @@ function renderTaggedEvents() {
           
           savePlaylists();
           renderClips();
-          saveAnnotations(); // Persistir alteração localmente!
+          saveAnnotations();
         }
         renderTaggedEvents();
       };
       
       input.addEventListener('blur', saveChange);
       input.addEventListener('keydown', (eKey) => {
-        if (eKey.key === 'Enter') {
-          saveChange();
-        }
+        if (eKey.key === 'Enter') saveChange();
       });
       
-      // Substituir o text pelo input
       details.replaceChild(input, nameSpan);
       input.focus();
       input.select();
@@ -2915,60 +3305,107 @@ function renderTaggedEvents() {
     delBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       if (confirm(`Pretendes eliminar o evento "${ev.name}" registado?`)) {
+        selectedEventIndices.delete(index);
         taggedEvents.splice(index, 1);
-        saveAnnotations(); // Persistir a eliminação localmente!
+        saveAnnotations();
         renderTaggedEvents();
+        updateTimelineMarkers();
       }
     });
     
+    li.appendChild(chk);
     li.appendChild(details);
     li.appendChild(editBtn);
     li.appendChild(delBtn);
     
-    // Clicar no evento para ir para o momento dele e opcionalmente encaminhar para a playlist
+    // Clicar no item salta para o momento do evento
     li.addEventListener('click', () => {
-      if (details.querySelector('input')) return; // se estiver a editar, ignorar clique de play
+      if (details.querySelector('input')) return;
       
-      clip.inTime = ev.inTime;
-      clip.outTime = ev.outTime;
-      video.currentTime = ev.inTime;
-      updateTimelineMarkers();
-      video.play().catch(e => {});
-      
-      // Se houver uma playlist ativa, adicionar o evento à playlist
-      if (activePlaylistId) {
-        const currentPl = playlists.find(p => p.id === activePlaylistId);
-        if (currentPl) {
-          const exists = currentPl.clips.some(cl => cl.inTime === ev.inTime && cl.outTime === ev.outTime && cl.videoPath === (clip.inputPath || ''));
-          if (!exists) {
-            const eventAnnotations = JSON.parse(JSON.stringify(ds.annotations || [])).filter(ann => ann.timestamp >= ev.inTime && ann.timestamp <= ev.outTime);
-            currentPl.clips.push({
-              id: 'clip_' + Date.now(),
-              title: `${ev.name} (Min ${formatTime(ev.time)})`,
-              videoPath: clip.inputPath || '',
-              inTime: ev.inTime,
-              outTime: ev.outTime,
-              annotations: eventAnnotations
-            });
-            savePlaylists();
-            renderClips();
-            showToast("✅ Evento adicionado à playlist!", 2000);
-          } else {
-            showToast("ℹ️ Este evento já está na playlist", 2000);
-          }
-        }
-        
-        // Efeito de flash verde
-        li.classList.remove('added-flash');
-        void li.offsetWidth; // forçar reflow
-        li.classList.add('added-flash');
-        setTimeout(() => {
-          li.classList.remove('added-flash');
-        }, 800);
-      }
+      video.currentTime = ev.inTime !== undefined ? ev.inTime : ev.time;
+      if (video.paused) video.play();
+      showToast(`🏷️ ${ev.name}`, 2000);
     });
     
     taggedEventsList.appendChild(li);
+  });
+  
+  updateEventsHeader();
+}
+
+// Eventos de Selecionar Todos & Ações em Massa no Painel de Eventos
+const checkSelectAllEvents = document.getElementById('checkSelectAllEvents');
+if (checkSelectAllEvents) {
+  checkSelectAllEvents.addEventListener('change', () => {
+    if (checkSelectAllEvents.checked) {
+      selectedEventIndices = new Set(taggedEvents.map((_, i) => i));
+    } else {
+      selectedEventIndices.clear();
+    }
+    renderTaggedEvents();
+  });
+}
+
+const btnDeleteSelectedEvents = document.getElementById('btnDeleteSelectedEvents');
+if (btnDeleteSelectedEvents) {
+  btnDeleteSelectedEvents.addEventListener('click', () => {
+    const count = selectedEventIndices.size;
+    if (count === 0) return;
+    
+    const confirmMsg = t('confirm-delete-events', `Tens a certeza que pretendes eliminar os ${count} eventos selecionados?`, count);
+    if (confirm(confirmMsg)) {
+      taggedEvents = taggedEvents.filter((_, idx) => !selectedEventIndices.has(idx));
+      selectedEventIndices.clear();
+      saveAnnotations();
+      renderTaggedEvents();
+      updateTimelineMarkers();
+      showToast(t('toast-events-deleted', '🗑️ {0} eventos eliminados com sucesso!', count), 3000);
+    }
+  });
+}
+
+const btnAddSelectedEventsToPlaylist = document.getElementById('btnAddSelectedEventsToPlaylist');
+if (btnAddSelectedEventsToPlaylist) {
+  btnAddSelectedEventsToPlaylist.addEventListener('click', () => {
+    const count = selectedEventIndices.size;
+    if (count === 0 || !activePlaylistId) return;
+    
+    const currentPl = playlists.find(p => p.id === activePlaylistId);
+    if (!currentPl) return;
+    
+    let addedCount = 0;
+    const sortedIndices = [...selectedEventIndices].sort((a, b) => a - b);
+    
+    sortedIndices.forEach(idx => {
+      const ev = taggedEvents[idx];
+      if (!ev) return;
+      
+      const t0 = ev.inTime !== undefined ? ev.inTime : Math.max(0, ev.time - 5);
+      const t1 = ev.outTime !== undefined ? ev.outTime : Math.min(video.duration || 9999, ev.time + 3);
+      
+      // Filtrar anotações sobrepostas
+      const overlappingAnns = ds.annotations.filter(ann => ann.timestamp >= t0 - 2 && ann.timestamp <= t1);
+      const targetClones = JSON.parse(JSON.stringify(overlappingAnns));
+      targetClones.forEach(ann => {
+        if (ann.timestamp < t0) ann.timestamp = t0;
+      });
+      
+      currentPl.clips.push({
+        id: 'clip_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+        title: `${ev.name} (Min ${formatTime(ev.time)})`,
+        videoPath: clip.inputPath,
+        inTime: t0,
+        outTime: t1,
+        annotations: targetClones
+      });
+      addedCount++;
+    });
+    
+    if (addedCount > 0) {
+      savePlaylists();
+      renderClips();
+      showToast(t('toast-events-added-pl', '✅ {0} eventos adicionados à playlist!', addedCount), 3000);
+    }
   });
 }
 
@@ -3149,7 +3586,7 @@ function renderShortcutList() {
     
     delBtn.addEventListener('click', () => {
       if (Object.keys(shortcutKeys).length <= 1) {
-        showToast("⚠️ Tens de ter pelo menos 1 atalho configurado", 3000);
+        showToast(t("toast-sc-min", "⚠️ Tens de ter pelo menos 1 atalho configurado"), 3000);
         return;
       }
       if (confirm(`Remover o atalho "${key}" (${value})?`)) {
@@ -3179,7 +3616,7 @@ if (btnAddTagShortcut) {
     }
     
     if (!nextKey) {
-      showToast("⚠️ Limite atingido: Só podes configurar atalhos de 1 a 9", 4000);
+      showToast(t("toast-sc-limit", "⚠️ Limite atingido: Só podes configurar atalhos de 1 a 9"), 4000);
       return;
     }
     
@@ -3200,7 +3637,7 @@ if (btnAddTagShortcut) {
       }
     }, 50);
     
-    showToast(`✅ Atalho (Tecla ${nextKey}) adicionado! Escreva o nome abaixo.`, 3000);
+    showToast(t('toast-sc-added', '✅ Atalho (Tecla {0}) adicionado!', nextKey), 3000);
   });
 }
 
@@ -3208,3 +3645,511 @@ if (btnAddTagShortcut) {
 loadPlaylists();
 loadShortcutNames();
 
+
+
+
+// Close HUD button
+const btnCloseHud = document.getElementById('btnCloseHud');
+if (btnCloseHud) {
+  btnCloseHud.addEventListener('click', () => {
+    stopCalibration();
+  });
+}
+
+// Remind user of missing players when seeking/playing video
+let lastCalibReminderTime = 0;
+video.addEventListener('timeupdate', () => {
+  if (!calibrationState.active) return;
+  const now = Date.now();
+  if (now - lastCalibReminderTime > 12000) { // Every 12s if still missing
+    const currentPlayers = ds.annotations.filter(a => a.tool === 'track' && !a.isBall).length;
+    const missing = calibrationState.targetPlayers - currentPlayers;
+    if (missing > 0 && missing <= 5) {
+      showToast(t('toast-calib-missing', 'Tens {0} jogadores registados. Faltam {1} para os {2}.', currentPlayers, missing, calibrationState.targetPlayers), 3000);
+      lastCalibReminderTime = now;
+    }
+  }
+});
+
+
+
+
+// ══════════════════════════════════════════════════════════
+//   2D TACTICAL RADAR ENGINE & PITCH MAPPING
+// ══════════════════════════════════════════════════════════
+const radarWidget = document.getElementById('tacticalRadarWidget');
+const radarCanvas = document.getElementById('radarCanvas');
+const radarCtx    = radarCanvas ? radarCanvas.getContext('2d') : null;
+const btnToggleRadar = document.getElementById('btnToggleRadar');
+const btnRadarClose  = document.getElementById('btnRadarClose');
+const radarCountEl   = document.getElementById('radarCount');
+
+const radarState = {
+  active: false,
+  teamAColor: '#00b0ff', // Blue/Cyan
+  teamBColor: '#ff5252', // Red/Coral
+  ballColor:  '#ffd700', // Gold Yellow
+  teamAPlayers: [],
+  teamBPlayers: []
+};
+
+function toggleTacticalRadar() {
+  radarState.active = !radarState.active;
+  if (radarWidget) {
+    radarWidget.style.display = radarState.active ? 'flex' : 'none';
+  }
+  if (btnToggleRadar) {
+    btnToggleRadar.classList.toggle('active', radarState.active);
+  }
+  if (radarState.active) {
+    renderRadarFrame();
+    showToast(t('toast-radar-opened', '🗺️ Radar 2D Ativado! Mapeamento do campo em tempo real.'), 3000);
+  }
+}
+
+if (btnToggleRadar) btnToggleRadar.addEventListener('click', toggleTacticalRadar);
+if (btnRadarClose) btnRadarClose.addEventListener('click', () => {
+  radarState.active = false;
+  if (radarWidget) radarWidget.style.display = 'none';
+  if (btnToggleRadar) btnToggleRadar.classList.remove('active');
+});
+
+// Keyboard shortcut 'M' for Map/Radar
+document.addEventListener('keydown', (e) => {
+  if (document.activeElement && ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) return;
+  });
+
+// Make Radar Widget Draggable
+if (radarWidget) {
+  const rHeader = document.getElementById('radarHeader');
+  if (rHeader) {
+    let isDragging = false, startX, startY, initLeft, initTop;
+    rHeader.addEventListener('mousedown', (e) => {
+      if (e.target.tagName === 'BUTTON') return;
+      isDragging = true;
+      startX = e.clientX;
+      startY = e.clientY;
+      const rect = radarWidget.getBoundingClientRect();
+      initLeft = rect.left;
+      initTop  = rect.top;
+      radarWidget.style.bottom = 'auto';
+      radarWidget.style.right = 'auto';
+      radarWidget.style.left = initLeft + 'px';
+      radarWidget.style.top  = initTop + 'px';
+
+      const onMouseMove = (ev) => {
+        if (!isDragging) return;
+        const dx = ev.clientX - startX;
+        const dy = ev.clientY - startY;
+        radarWidget.style.left = (initLeft + dx) + 'px';
+        radarWidget.style.top  = (initTop + dy) + 'px';
+      };
+
+      const onMouseUp = () => {
+        isDragging = false;
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onMouseUp);
+      };
+
+      document.addEventListener('mousemove', onMouseMove);
+      document.addEventListener('mouseup', onMouseUp);
+    });
+  }
+}
+
+// ── Draw 2D Soccer Pitch ──────────────────────────────────
+function draw2DPitch(ctx, w, h) {
+  const padX = 14, padY = 14;
+  const pw = w - padX * 2;
+  const ph = h - padY * 2;
+
+  // 1. Grass background with mowing stripes
+  ctx.fillStyle = '#102214';
+  ctx.fillRect(0, 0, w, h);
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(padX, padY, pw, ph);
+  ctx.clip();
+
+  const stripeCount = 10;
+  const stripeW = pw / stripeCount;
+  for (let s = 0; s < stripeCount; s++) {
+    ctx.fillStyle = (s % 2 === 0) ? '#142c1b' : '#112516';
+    ctx.fillRect(padX + s * stripeW, padY, stripeW, ph);
+  }
+  ctx.restore();
+
+  // 2. Pitch markings
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.75)';
+  ctx.lineWidth = 1.5;
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
+
+  // Outer boundary
+  ctx.strokeRect(padX, padY, pw, ph);
+
+  // Halfway line
+  const midX = padX + pw / 2;
+  ctx.beginPath();
+  ctx.moveTo(midX, padY);
+  ctx.lineTo(midX, padY + ph);
+  ctx.stroke();
+
+  // Center circle (R = 9.15m -> ~15% of pitch width)
+  const centerR = pw * 0.088;
+  ctx.beginPath();
+  ctx.arc(midX, padY + ph / 2, centerR, 0, Math.PI * 2);
+  ctx.stroke();
+
+  // Center spot
+  ctx.beginPath();
+  ctx.arc(midX, padY + ph / 2, 2.5, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Left & Right Penalty Areas (16.5m)
+  const penW = pw * 0.155;
+  const penH = ph * 0.58;
+  const penY = padY + (ph - penH) / 2;
+
+  // Left penalty box
+  ctx.strokeRect(padX, penY, penW, penH);
+  // Left goal box (5.5m)
+  const goalW = pw * 0.055;
+  const goalH = ph * 0.32;
+  const goalY = padY + (ph - goalH) / 2;
+  ctx.strokeRect(padX, goalY, goalW, goalH);
+  // Left penalty spot
+  const leftPenSpotX = padX + pw * 0.105;
+  ctx.beginPath();
+  ctx.arc(leftPenSpotX, padY + ph / 2, 2, 0, Math.PI * 2);
+  ctx.fill();
+  // Left penalty arc
+  ctx.beginPath();
+  ctx.arc(leftPenSpotX, padY + ph / 2, centerR, -0.65, 0.65);
+  ctx.stroke();
+
+  // Right penalty box
+  ctx.strokeRect(padX + pw - penW, penY, penW, penH);
+  // Right goal box
+  ctx.strokeRect(padX + pw - goalW, goalY, goalW, goalH);
+  // Right penalty spot
+  const rightPenSpotX = padX + pw - pw * 0.105;
+  ctx.beginPath();
+  ctx.arc(rightPenSpotX, padY + ph / 2, 2, 0, Math.PI * 2);
+  ctx.fill();
+  // Right penalty arc
+  ctx.beginPath();
+  ctx.arc(rightPenSpotX, padY + ph / 2, centerR, Math.PI - 0.65, Math.PI + 0.65);
+  ctx.stroke();
+
+  // Corner arcs
+  const cornerR = 5;
+  ctx.beginPath(); ctx.arc(padX, padY, cornerR, 0, Math.PI / 2); ctx.stroke();
+  ctx.beginPath(); ctx.arc(padX, padY + ph, cornerR, -Math.PI / 2, 0); ctx.stroke();
+  ctx.beginPath(); ctx.arc(padX + pw, padY, cornerR, Math.PI / 2, Math.PI); ctx.stroke();
+  ctx.beginPath(); ctx.arc(padX + pw, padY + ph, cornerR, Math.PI, Math.PI * 1.5); ctx.stroke();
+
+  return { padX, padY, pw, ph };
+}
+
+// ── Perspective Homography Mapping from Video to 2D Pitch ──
+let cameraPanTimeline = [];
+
+function getCameraPanAtTime(t) {
+  if (!cameraPanTimeline || cameraPanTimeline.length === 0) return 0;
+  let p = cameraPanTimeline[0];
+  for (let i = 0; i < cameraPanTimeline.length; i++) {
+    if (cameraPanTimeline[i].time <= t) p = cameraPanTimeline[i];
+    else break;
+  }
+  return p ? (p.pan || 0) : 0;
+}
+
+function mapVideoToPitch(normX, normY, t = 0) {
+  // Broadcast Camera Perspective Correction Model with Dynamic Pan Shift
+  const sy = Math.max(0, Math.min(1, normY));
+  const sx = Math.max(0, Math.min(1, normX));
+
+  // Depth scaling from trapezoid perspective
+  const depthFactor = 0.72 + (sy * 0.56);
+  const centeredX   = (sx - 0.5) * depthFactor;
+
+  // Dynamic Camera Pan Shift (0.50 = midfield)
+  const panShift = getCameraPanAtTime(t);
+  const camCenterX = 0.50 + panShift * 0.45; // camera center on full 105m pitch
+
+  // Camera field of view is approximately ~35% of the total 105m pitch
+  const fovWidth = 0.38;
+  const rawPitchX = camCenterX + centeredX * fovWidth;
+
+  // Normalized pitch mapping: Y in [0.16, 0.88] maps to pitch [0.03, 0.97]
+  const pitchX = Math.max(0.02, Math.min(0.98, rawPitchX));
+  const pitchY = Math.max(0.03, Math.min(0.97, (sy - 0.16) / 0.72));
+
+  return { x: pitchX, y: pitchY };
+}
+
+// ── Render Radar Frame ─────────────────────────────────────
+function renderRadarFrame() {
+  if (!radarState.active || !radarCanvas || !radarCtx) return;
+
+  const dpr = window.devicePixelRatio || 1;
+  const w = 340, h = 220;
+  if (radarCanvas.width !== w * dpr) {
+    radarCanvas.width  = w * dpr;
+    radarCanvas.height = h * dpr;
+    radarCtx.scale(dpr, dpr);
+  }
+
+  const bounds = draw2DPitch(radarCtx, w, h);
+  const currentTime = video.currentTime || 0;
+
+  // Filter tracked annotations
+  const trackAnns = ds.annotations.filter(a => a.tool === 'track' && a.trajectory);
+  if (radarCountEl) radarCountEl.textContent = trackAnns.filter(a => !a.isBall).length;
+
+  // Draw player & ball dots
+  trackAnns.forEach((ann, idx) => {
+    const relTime = currentTime - ann.timestamp;
+    let isVisibleNow = (relTime >= -0.3 && relTime <= ann.duration);
+    let point = null;
+
+    if (isVisibleNow && ann.trajectory) {
+      point = ann.trajectory[0];
+      for (let i = 0; i < ann.trajectory.length; i++) {
+        if (ann.trajectory[i].time <= relTime) point = ann.trajectory[i];
+        else break;
+      }
+    }
+
+    let pitchCoords = null;
+    if (point) {
+      // Live on-screen position with dynamic camera pan time
+      pitchCoords = mapVideoToPitch(point.x, point.y, currentTime);
+      ann.lastPitchPos = { x: pitchCoords.x, y: pitchCoords.y, time: currentTime };
+    } else if (ann.lastPitchPos) {
+      // Off-screen memory retention!
+      pitchCoords = { x: ann.lastPitchPos.x, y: ann.lastPitchPos.y };
+    }
+
+    if (!pitchCoords) return;
+
+    const dotX = bounds.padX + pitchCoords.x * bounds.pw;
+    const dotY = bounds.padY + pitchCoords.y * bounds.ph;
+
+    radarCtx.save();
+
+    if (ann.isBall) {
+      // ⚽ Ball Dot
+      radarCtx.beginPath();
+      radarCtx.arc(dotX, dotY, 4, 0, Math.PI * 2);
+      radarCtx.fillStyle = radarState.ballColor;
+      radarCtx.shadowColor = radarState.ballColor;
+      radarCtx.shadowBlur = 8;
+      radarCtx.fill();
+    } else {
+      // 👥 Player Dot (Team A vs Team B)
+      const isTeamA = (idx % 2 === 0);
+      const teamColor = isTeamA ? radarState.teamAColor : radarState.teamBColor;
+
+      // Halo for off-screen indication
+      if (!point) {
+        radarCtx.globalAlpha = 0.55;
+        radarCtx.beginPath();
+        radarCtx.arc(dotX, dotY, 7, 0, Math.PI * 2);
+        radarCtx.strokeStyle = teamColor;
+        radarCtx.lineWidth = 1;
+        radarCtx.setLineDash([2, 2]);
+        radarCtx.stroke();
+      }
+
+      const dotR = 6.5;
+      radarCtx.beginPath();
+      radarCtx.arc(dotX, dotY, dotR, 0, Math.PI * 2);
+      radarCtx.fillStyle = teamColor;
+      radarCtx.shadowColor = teamColor;
+      radarCtx.shadowBlur = point ? 8 : 2;
+      radarCtx.fill();
+
+      radarCtx.strokeStyle = '#ffffff';
+      radarCtx.lineWidth = 1.2;
+      radarCtx.setLineDash([]);
+      radarCtx.stroke();
+
+      // Number text inside 2D radar dot
+      if (ann.playerNum !== undefined) {
+        radarCtx.fillStyle = '#ffffff';
+        radarCtx.font = 'bold 8px Outfit, system-ui, sans-serif';
+        radarCtx.textAlign = 'center';
+        radarCtx.textBaseline = 'middle';
+        radarCtx.shadowBlur = 0;
+        radarCtx.fillText(ann.playerNum.toString(), dotX, dotY + 0.5);
+      }
+    }
+
+    radarCtx.restore();
+  });
+}
+
+// Hook Radar rendering into video render loop
+const prevRedrawWithRadar = redraw;
+redraw = function() {
+  prevRedrawWithRadar();
+  if (radarState.active) {
+    renderRadarFrame();
+  }
+};
+
+
+// ── Double-Click on player to edit Number / Team ─────────
+canvas.addEventListener('dblclick', (e) => {
+  if (!ds.enabled) return;
+  const pos = getPos(e);
+  const t = video.currentTime || 0;
+  const match = findAnnotationAtPoint(pos.x, pos.y, t);
+  if (match && match.ann && match.ann.tool === 'track' && !match.ann.isBall) {
+    const curNum = match.ann.playerNum || 1;
+    const curTeam = match.ann.team || 'A';
+    const inputVal = prompt(`Alterar Número do Jogador (Equipa ${curTeam}):`, curNum.toString());
+    if (inputVal !== null) {
+      const parsed = parseInt(inputVal);
+      if (!isNaN(parsed) && parsed > 0 && parsed <= 99) {
+        match.ann.playerNum = parsed;
+        redraw();
+        if (radarState.active) renderRadarFrame();
+        scheduleAnnotationSave();
+        showToast(`👕 Jogador atualizado para o número #${parsed}!`, 2000);
+      }
+    }
+  }
+});
+
+
+// ══════════════════════════════════════════════════════════
+//   CSV EVENT EXPORT & IMPORT MODULE
+// ══════════════════════════════════════════════════════════
+const btnExportEventsCSV = document.getElementById('btnExportEventsCSV');
+const btnImportMetrica   = document.getElementById('btnImportMetrica');
+
+// ── Export Tagged Events to CSV ───────────────────────────
+if (btnExportEventsCSV) {
+  btnExportEventsCSV.addEventListener('click', async () => {
+    if (!taggedEvents || taggedEvents.length === 0) {
+      showToast(t('toast-export-csv-empty', '⚠️ Não existem eventos registados para exportar!'), 3500);
+      return;
+    }
+
+    const videoName = clip.inputPath ? path.basename(clip.inputPath) : 'video';
+    const baseName  = path.basename(videoName, path.extname(videoName));
+    const defaultCsvName = `${baseName}_eventos_${Date.now()}.csv`;
+
+    // Build standard CSV header & rows (Compatible with Metrica, Excel, Sportscode)
+    const headers = ['Id', 'Evento', 'Tempo_Segundos', 'Inicio_Segundos', 'Fim_Segundos', 'Duracao_Segundos', 'Timestamp_Formatado', 'Inicio_Formatado', 'Fim_Formatado', 'Ficheiro_Video'];
+    const rows = [headers.join(',')];
+
+    taggedEvents.forEach((ev, idx) => {
+      const id = idx + 1;
+      const name = `"${(ev.name || 'Evento').replace(/"/g, '""')}"`;
+      const time = (ev.time || 0).toFixed(2);
+      const inTime = (ev.inTime || Math.max(0, ev.time - 5)).toFixed(2);
+      const outTime = (ev.outTime || Math.min(video.duration || 9999, ev.time + 3)).toFixed(2);
+      const duration = (outTime - inTime).toFixed(2);
+      const timeFmt = formatTime(ev.time || 0);
+      const inFmt = formatTime(ev.inTime || 0);
+      const outFmt = formatTime(ev.outTime || 0);
+      const file = `"${videoName.replace(/"/g, '""')}"`;
+
+      rows.push([id, name, time, inTime, outTime, duration, timeFmt, inFmt, outFmt, file].join(','));
+    });
+
+    const csvContent = rows.join('\r\n');
+
+    try {
+      const res = await ipcRenderer.invoke('export-csv', {
+        defaultName: defaultCsvName,
+        content: csvContent
+      });
+
+      if (res && res.success) {
+        showToast(t('toast-export-csv-success', '✅ {0} eventos exportados com sucesso!', taggedEvents.length), 5000, res.filePath);
+      } else if (res && !res.canceled && res.error) {
+        showToast('❌ Erro ao exportar CSV: ' + res.error, 4500);
+      }
+    } catch (err) {
+      showToast('❌ Erro: ' + err.message, 4500);
+    }
+  });
+}
+
+// ── Import Events from CSV ────────────────────────────────
+if (btnImportMetrica) {
+  btnImportMetrica.addEventListener('click', async () => {
+    try {
+      const res = await ipcRenderer.invoke('import-csv');
+      if (!res || res.canceled || !res.content) return;
+
+      const lines = res.content.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
+      if (lines.length <= 1) {
+        showToast(t('toast-import-csv-empty', '⚠️ Ficheiro CSV vazio ou sem dados válidos.'), 3500);
+        return;
+      }
+
+      // Parse delimiter (comma, semicolon, tab)
+      const delimiter = lines[0].includes(';') ? ';' : (lines[0].includes('\t') ? '\t' : ',');
+      const headerCols = lines[0].split(delimiter).map(c => c.trim().replace(/^["']|["']$/g, '').toLowerCase());
+
+      // Column index finder
+      const nameIdx  = headerCols.findIndex(c => c.includes('event') || c.includes('evento') || c.includes('name') || c.includes('nome') || c.includes('tag'));
+      const timeIdx  = headerCols.findIndex(c => c.includes('tempo') || c.includes('time') || c.includes('timestamp') || c.includes('start') || c.includes('inicio'));
+      const inIdx    = headerCols.findIndex(c => c.includes('inicio') || c.includes('in') || c.includes('start'));
+      const outIdx   = headerCols.findIndex(c => c.includes('fim') || c.includes('out') || c.includes('end'));
+
+      let importedCount = 0;
+
+      for (let i = 1; i < lines.length; i++) {
+        const cols = lines[i].split(delimiter).map(c => c.trim().replace(/^["']|["']$/g, ''));
+        if (cols.length < 2) continue;
+
+        let evName = nameIdx !== -1 ? cols[nameIdx] : (cols[1] || cols[0]);
+        let evTime = 0;
+
+        // Parse time
+        const rawTime = timeIdx !== -1 ? cols[timeIdx] : cols[2];
+        if (rawTime) {
+          if (rawTime.includes(':')) {
+            const parts = rawTime.split(':').map(Number);
+            evTime = parts.length === 3 ? parts[0] * 3600 + parts[1] * 60 + parts[2] : parts[0] * 60 + parts[1];
+          } else {
+            evTime = parseFloat(rawTime) || 0;
+          }
+        }
+
+        let inT  = inIdx !== -1 && cols[inIdx] ? parseFloat(cols[inIdx]) : Math.max(0, evTime - 5);
+        let outT = outIdx !== -1 && cols[outIdx] ? parseFloat(cols[outIdx]) : Math.min(video.duration || 9999, evTime + 3);
+
+        if (isNaN(inT)) inT = Math.max(0, evTime - 5);
+        if (isNaN(outT)) outT = evTime + 3;
+
+        taggedEvents.push({
+          id: 'event_' + Date.now() + '_' + i,
+          name: evName || `Evento ${i}`,
+          time: evTime,
+          inTime: inT,
+          outTime: outT
+        });
+        importedCount++;
+      }
+
+      if (importedCount > 0) {
+        renderTaggedEvents();
+        updateTimelineMarkers();
+        saveAnnotations();
+        showToast(t('toast-import-csv-success', '✅ {0} eventos importados com sucesso do CSV!', importedCount), 4500);
+      } else {
+        showToast(t('toast-import-csv-cols', '⚠️ Não foi possível reconhecer as colunas do CSV.'), 4000);
+      }
+    } catch (err) {
+      showToast('❌ Erro ao importar CSV: ' + err.message, 4500);
+    }
+  });
+}

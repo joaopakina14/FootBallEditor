@@ -36,13 +36,12 @@
     <!-- Empty state -->
     <div class="empty-state" id="emptyState">
       <div class="empty-icon">&#9654;</div>
-      <h2 data-i18n="empty-title">Sem v&#237;deo carregado</h2>
-      <p data-i18n="empty-desc">Abre um ficheiro de v&#237;deo para come&#231;ar</p>
-      <button class="btn-open" id="btnOpenEmpty" data-i18n="empty-btn">Abrir V&#237;deo</button>
-      <p class="formats" data-i18n="empty-formats">MP4 &#183; MKV &#183; AVI &#183; MOV &#183; WMV &#183; WebM e mais</p>
+      <h2 data-i18n="empty-title">Sem vídeo carregado</h2>
+      <p data-i18n="empty-desc">Abre um ficheiro de vídeo para começar</p>
+      <button class="btn-open" id="btnOpenEmpty" data-i18n="empty-btn">Abrir Vídeo</button>
+      <p class="formats" data-i18n="empty-formats">MP4 • MKV • AVI • MOV • WMV • WebM e mais</p>
     </div>
 
-    <!-- Player -->
     <!-- Player -->
     <div class="player-wrap" id="playerWrap" style="display:none">
 
@@ -57,20 +56,22 @@
             <select class="playlist-select" id="playlistSelect" style="flex: 1; min-width: 0;">
               <option value="" data-i18n="select-playlist-prompt">-- Escolher Playlist --</option>
             </select>
-            <input type="text" id="playlistRenameInput" class="playlist-select" style="display: none; flex: 1; min-width: 0; padding: 6px 10px;" placeholder="Nome da playlist..." />
+            <input type="text" id="playlistRenameInput" class="playlist-select" style="display: none; flex: 1; min-width: 0; padding: 6px 10px;" data-i18n-placeholder="placeholder-playlist-name" placeholder="Nome da playlist..." />
             <button class="sb-add-btn" id="btnRenamePlaylist" data-i18n-title="title-rename-pl" style="display: none; font-size: 11px; flex-shrink: 0; width: 26px; height: 26px;">✏️</button>
             <button class="sb-add-btn" id="btnDeletePlaylist" data-i18n-title="title-delete-pl" style="display: none; font-size: 11px; flex-shrink: 0; width: 26px; height: 26px; background: rgba(229, 9, 20, 0.15); color: #e50914;">🗑️</button>
           </div>
           <button class="btn-open" id="btnAddCurrentToPlaylist" style="width: 100%; margin-top: 6px; font-size: 11px; padding: 6px 12px;" disabled data-i18n="sb-add-current-btn">+ Adicionar Seleção Atual</button>
           <button class="btn-open" id="btnExportPlaylist" data-i18n="btn-export-pl" style="width: 100%; margin-top: 6px; font-size: 11px; padding: 6px 12px; background: linear-gradient(135deg, #27ae60, #2ecc71); box-shadow: 0 4px 20px rgba(39, 174, 96, 0.25);" disabled>📥 Exportar Playlist</button>
+          
           <!-- Clips header: select-all + bulk actions -->
           <div id="clipsHeader" class="clips-header" style="display: none;">
             <label class="clip-select-all-label">
               <input type="checkbox" id="checkSelectAll" />
-              <span>Selecionar Todos</span>
+              <span data-i18n="select-all">Selecionar Todos</span>
             </label>
             <button id="btnDeleteSelected" class="clip-bulk-del" style="display:none;" data-i18n-title="title-delete-selected">🗑️ Eliminar Seleção</button>
           </div>
+          
           <div class="sb-label" data-i18n="sb-clips-label">Clips na Playlist</div>
           <ul class="clip-list" id="clipList">
             <!-- Dynamic clips list -->
@@ -95,7 +96,7 @@
         <div class="toast" id="toast"></div>
 
         <!-- Drawing toolbar -->
-        <div class="draw-panel" id="drawPanel">
+        <div class="draw-panel horizontal dock-bottom" id="drawPanel">
           <div class="dp-label" id="dpToolsLabel" data-i18n-title="title-dp-tools">🛠️</div>
           <div class="dp-tools-grid">
             <button class="dp-tool active" data-tool="pencil" data-i18n-title="title-pencil">&#9998;</button>
@@ -194,7 +195,11 @@
       <div class="sidebar-panel right collapsed" id="taggingSidebar">
         <div class="sb-header">
           <span class="sb-title" data-i18n="sb-tagging-title">Painel de Eventos</span>
-          <button class="sb-add-btn" id="btnAddTagShortcut" data-i18n-title="title-add-shortcut">+</button>
+          <div style="display: flex; gap: 4px;">
+            <button class="sb-add-btn" id="btnExportEventsCSV" data-i18n-title="title-export-csv" title="Exportar Eventos em CSV">📤</button>
+            <button class="sb-add-btn" id="btnImportMetrica" data-i18n-title="title-import-metrica" title="Importar Eventos CSV">📥</button>
+            <button class="sb-add-btn" id="btnAddTagShortcut" data-i18n-title="title-add-shortcut">+</button>
+          </div>
         </div>
         <div class="sb-content">
           <div class="tag-settings">
@@ -223,6 +228,19 @@
           </div>
           <div class="sb-sep"></div>
           <div class="sb-label" data-i18n="sb-tagged-events">Eventos Registados</div>
+          
+          <!-- Events header: select-all + bulk actions -->
+          <div id="eventsHeader" class="clips-header" style="display: none;">
+            <label class="clip-select-all-label">
+              <input type="checkbox" id="checkSelectAllEvents" />
+              <span data-i18n="select-all">Selecionar Todos</span>
+            </label>
+            <div style="display: flex; gap: 4px;">
+              <button id="btnAddSelectedEventsToPlaylist" class="clip-bulk-del" style="display:none; background: rgba(0, 176, 255, 0.15); color: #00b0ff; border-color: rgba(0, 176, 255, 0.3);" data-i18n-title="title-add-selected-pl" title="Adicionar à Playlist">➕ Playlist</button>
+              <button id="btnDeleteSelectedEvents" class="clip-bulk-del" style="display:none;" data-i18n-title="title-delete-selected" title="Eliminar Seleção">🗑️ Eliminar</button>
+            </div>
+          </div>
+          
           <ul class="tagged-events-list" id="taggedEventsList">
             <!-- Dynamic events list -->
           </ul>

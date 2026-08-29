@@ -112,6 +112,44 @@ function createWindow() {
   })
 
   // ── Export playlist: concatenate clips into one video ──────────────────
+  
+  // ── Export CSV Dialog & File Writer ──────────────────────
+  ipcMain.handle('export-csv', async (event, { defaultName, content }) => {
+    const result = await dialog.showSaveDialog(win, {
+      defaultPath: defaultName || 'eventos_analise.csv',
+      filters: [
+        { name: 'Ficheiro CSV', extensions: ['csv'] },
+        { name: 'Todos os ficheiros', extensions: ['*'] }
+      ]
+    })
+    if (result.canceled || !result.filePath) return { canceled: true }
+    try {
+      // Write with UTF-8 BOM so Excel opens accented characters flawlessly
+      fs.writeFileSync(result.filePath, '\ufeff' + content, 'utf8')
+      return { success: true, filePath: result.filePath }
+    } catch (err) {
+      return { success: false, error: err.message }
+    }
+  })
+
+  // ── Import CSV Dialog & File Reader ──────────────────────
+  ipcMain.handle('import-csv', async () => {
+    const result = await dialog.showOpenDialog(win, {
+      properties: ['openFile'],
+      filters: [
+        { name: 'Ficheiro CSV', extensions: ['csv', 'txt'] },
+        { name: 'Todos os ficheiros', extensions: ['*'] }
+      ]
+    })
+    if (result.canceled || !result.filePaths.length) return { canceled: true }
+    try {
+      const content = fs.readFileSync(result.filePaths[0], 'utf8')
+      return { success: true, filePath: result.filePaths[0], content }
+    } catch (err) {
+      return { success: false, error: err.message }
+    }
+  })
+
   ipcMain.handle('export-playlist', async (event, { clips }) => {
     const os = require('os')
     const tmpBase = path.join(os.tmpdir(), `fv_export_${Date.now()}`)
@@ -250,7 +288,7 @@ function createWindow() {
   })
 
   // ── Save annotations internally (in app userData dir) ────────────────
-  ipcMain.handle('save-annotations', (event, { videoPath, annotations, taggedEvents, shortcutKeys }) => {
+  ipcMain.handle('save-annotations', (event, { videoPath, annotations, taggedEvents, shortcutKeys, playlists }) => {
     try {
       const storageDir = path.join(app.getPath('userData'), 'annotations')
       if (!fs.existsSync(storageDir)) fs.mkdirSync(storageDir, { recursive: true })
@@ -258,7 +296,7 @@ function createWindow() {
       const fileKey = Buffer.from(videoPath).toString('hex') + '.json'
       const annPath = path.join(storageDir, fileKey)
       
-      fs.writeFileSync(annPath, JSON.stringify({ videoPath, version: 1, annotations, taggedEvents, shortcutKeys }, null, 2), 'utf8')
+      fs.writeFileSync(annPath, JSON.stringify({ videoPath, version: 1, annotations, taggedEvents, shortcutKeys, playlists: playlists || [] }, null, 2), 'utf8')
       return { success: true }
     } catch (err) {
       console.error('save-annotations error:', err)
@@ -273,18 +311,69 @@ function createWindow() {
       const fileKey = Buffer.from(videoPath).toString('hex') + '.json'
       const annPath = path.join(storageDir, fileKey)
       
-      if (!fs.existsSync(annPath)) return { success: false, annotations: [], taggedEvents: [], shortcutKeys: {} }
+      if (!fs.existsSync(annPath)) return { success: false, annotations: [], taggedEvents: [], shortcutKeys: {}, playlists: [] }
       const data = JSON.parse(fs.readFileSync(annPath, 'utf8'))
       return { 
         success: true, 
         annotations: data.annotations || [], 
         taggedEvents: data.taggedEvents || [],
-        shortcutKeys: data.shortcutKeys || {}
+        shortcutKeys: data.shortcutKeys || {},
+        playlists: data.playlists || []
       }
     } catch (err) {
       console.error('load-annotations error:', err)
-      return { success: false, annotations: [], taggedEvents: [], shortcutKeys: {} }
+      return { success: false, annotations: [], taggedEvents: [], shortcutKeys: {}, playlists: [] }
     }
+  })
+
+  // ── Auto Track all players using YOLOv8 ─────────────────────────────
+  ipcMain.handle('auto-track', async (event, { videoPath, startTime, duration }) => {
+    return new Promise((resolve) => {
+      const { spawn } = require('child_process')
+      let scriptPath = path.join(__dirname, 'auto_tracker.py')
+      scriptPath = scriptPath.replace('app.asar', 'app.asar.unpacked')
+
+      const pythonProcess = spawn('python', [scriptPath, videoPath, startTime.toString(), duration.toString()])
+
+      let resultData = ''
+      let errorData = ''
+
+      pythonProcess.stdout.on('data', (data) => {
+        const lines = data.toString().split('\n')
+        for (const line of lines) {
+          if (!line.trim()) continue
+          try {
+            const parsed = JSON.parse(line.trim())
+            if (parsed.progress !== undefined) {
+              event.sender.send('auto-track-progress', parsed.progress)
+            } else {
+              resultData = line.trim() // Assign instead of append assuming single line json output at end
+            }
+          } catch(e) {
+            // Ignore non-json print lines (like YOLO init messages)
+          }
+        }
+      })
+
+      pythonProcess.stderr.on('data', (data) => {
+        errorData += data.toString()
+      })
+
+      pythonProcess.on('close', (code) => {
+        if (code !== 0 && !resultData) {
+          resolve({ success: false, error: errorData || 'Auto-tracker exited with error code ' + code })
+          return
+        }
+
+        try {
+          const result = JSON.parse(resultData)
+          resolve(result)
+        } catch (e) {
+          console.error('Failed to parse Python auto-tracker stdout:', resultData)
+          resolve({ success: false, error: 'Invalid JSON response from auto tracker script' })
+        }
+      })
+    })
   })
 
   // ── Track player trajectory using Python + OpenCV CSRT ──────────────
